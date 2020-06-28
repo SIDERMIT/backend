@@ -5,7 +5,7 @@ from django.utils import timezone
 
 class City(models.Model):
     """ city == project """
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     graph = models.TextField()
     demand_matrix = ArrayField(ArrayField(models.IntegerField()))
@@ -22,12 +22,12 @@ class City(models.Model):
 
 
 class Scene(models.Model):
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
 
 class Passenger(models.Model):
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     # passenger variables
@@ -43,7 +43,7 @@ class Passenger(models.Model):
 
 
 class TransportMode(models.Model):
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     # transport mode variables
@@ -61,14 +61,14 @@ class TransportMode(models.Model):
 
 
 class TransportNetwork(models.Model):
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
 
 class Route(models.Model):
     transport_network = models.ForeignKey(TransportNetwork, on_delete=models.CASCADE)
     transport_mode = models.ForeignKey(TransportMode, on_delete=models.CASCADE)
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     node_sequence_i = models.CharField(max_length=50)
     stop_sequence_i = models.CharField(max_length=50)
@@ -78,7 +78,7 @@ class Route(models.Model):
 
 class Optimization(models.Model):
     transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
-    create_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     STATUS_QUEUED = 'queued'
     STATUS_PROCESSING = 'processing'
     STATUS_FINISHED = 'finished'
