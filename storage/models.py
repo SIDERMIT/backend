@@ -22,6 +22,7 @@ class City(models.Model):
 
 
 class Scene(models.Model):
+    city = models.ForeignKey(City, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
@@ -29,7 +30,7 @@ class Scene(models.Model):
 class Passenger(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
-    scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
+    scene = models.OneToOneField(Scene, on_delete=models.CASCADE)
     # passenger variables
     va = models.FloatField()
     pv = models.FloatField()
