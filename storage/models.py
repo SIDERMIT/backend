@@ -62,6 +62,7 @@ class TransportMode(models.Model):
 
 
 class TransportNetwork(models.Model):
+    scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
