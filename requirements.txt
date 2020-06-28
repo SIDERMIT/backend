@@ -1,5 +1,5 @@
 Django==3.0.7
-rq==1.4.2
+rq==1.4.1
 django-rq==2.3.2
 psycopg2-binary==2.8.5
 python-decouple==3.3
