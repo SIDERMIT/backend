@@ -7,8 +7,8 @@ class City(models.Model):
     """ city == project """
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
-    graph = models.TextField()
-    demand_matrix = ArrayField(ArrayField(models.IntegerField()))
+    graph = models.TextField(null=False)
+    demand_matrix = ArrayField(ArrayField(models.IntegerField()), null=True)
     # graph parameters
     n = models.FloatField(null=True)
     p = models.FloatField(null=True)
