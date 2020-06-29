@@ -42,13 +42,15 @@ class BaseTestCase(TestCase):
             return json.loads(response.content)
         return response
 
+    # city helpers
+
     def cities_list(self, client, status_code=status.HTTP_200_OK):
         url = reverse('cities-list')
         data = dict()
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
-    def cities_create(self, client, data, status_code=status.HTTP_200_OK):
+    def cities_create(self, client, data, status_code=status.HTTP_201_CREATED):
         url = reverse('cities-list')
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
@@ -99,6 +101,14 @@ class CityAPITest(BaseTestCase):
             json_response = self.cities_retrieve(self.client, self.city_obj.public_id)
 
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
+
+    def test_create_city(self):
+        fields = dict(name='city name', graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
+                        beta=1)
+        with self.assertNumQueries(1):
+            self.cities_create(self.client, fields)
+
+        self.assertEqual(City.objects.count(), 2)
 
     def test_update_city(self):
         new_city_name = 'name2'
