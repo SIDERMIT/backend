@@ -8,7 +8,7 @@ from django.utils import timezone
 class City(models.Model):
     """ city == project """
     created_at = models.DateTimeField(default=timezone.now)
-    public_id = models.UUIDField(default=uuid.uuid4())
+    public_id = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=50)
     graph = models.TextField(null=False)
     demand_matrix = ArrayField(ArrayField(models.IntegerField()), null=True)
@@ -26,7 +26,7 @@ class City(models.Model):
 
 class Scene(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE)
-    public_id = models.UUIDField(default=uuid.uuid4())
+    public_id = models.UUIDField(default=uuid.uuid4)
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
