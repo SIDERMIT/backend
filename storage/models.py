@@ -26,6 +26,7 @@ class City(models.Model):
 
 class Scene(models.Model):
     city = models.ForeignKey(City, on_delete=models.CASCADE)
+    public_id = models.UUIDField(default=uuid.uuid4())
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
 
