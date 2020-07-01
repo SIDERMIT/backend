@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
-from api.serializers import CitySerializer, SceneSerializer
+from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer
 from storage.models import City, Scene, Passenger, TransportMode
 
 
@@ -145,6 +145,11 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
+    def scenes_passenger_action(self, client, public_id, data, status_code=status.HTTP_201_CREATED):
+        url = reverse('scenes-passenger', kwargs=dict(public_id=public_id))
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
 
 class CityAPITest(BaseTestCase):
 
@@ -274,3 +279,31 @@ class SceneAPITest(BaseTestCase):
 
         self.assertEqual(Scene.objects.count(), 2)
         self.assertDictEqual(json_response, SceneSerializer(Scene.objects.order_by('-created_at').first()).data)
+
+    def test_update_passenger(self):
+        data = dict(name='new name', va=2, pv=2, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
+
+        with self.assertNumQueries(4):
+            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data,
+                                                         status_code=status.HTTP_200_OK)
+
+        self.assertEqual(json_response['name'], data['name'])
+        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
+
+    def test_partial_update_passenger(self):
+        data = dict(name='new name')
+
+        with self.assertNumQueries(4):
+            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data,
+                                                         status_code=status.HTTP_200_OK)
+        self.assertEqual(json_response['name'], data['name'])
+        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
+
+    def test_create_passenger(self):
+        self.scene_obj.passenger.delete()
+
+        data = dict(name='new name', va=2, pv=2, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
+        with self.assertNumQueries(6):
+            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data)
+
+        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
