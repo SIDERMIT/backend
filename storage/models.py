@@ -60,7 +60,7 @@ class TransportMode(models.Model):
     t = models.FloatField()
     f_max = models.FloatField()
     k_max = models.FloatField()
-    tetha = models.FloatField()
+    theta = models.FloatField()
     tat = models.FloatField()
     d = models.FloatField()
 
