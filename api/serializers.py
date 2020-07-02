@@ -18,14 +18,16 @@ class CitySerializer(serializers.ModelSerializer):
 class PassengerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Passenger
-        fields = ('name', 'va', 'pv', 'pw', 'pa', 'pt', 'spv', 'spw', 'spa', 'spt')
+        fields = ('name', 'created_at', 'va', 'pv', 'pw', 'pa', 'pt', 'spv', 'spw', 'spa', 'spt')
+        read_only_fields = ['created_at']
 
 
 class TransportModeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransportMode
-        fields = ('name', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd')
-        read_only_fields = []
+        fields = (
+            'name', 'created_at', 'public_id', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd')
+        read_only_fields = ['created_at', 'public_id']
 
 
 class SceneSerializer(serializers.ModelSerializer):

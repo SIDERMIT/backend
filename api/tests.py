@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
-from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer
+from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer
 from storage.models import City, Scene, Passenger, TransportMode
 
 
@@ -147,6 +147,11 @@ class BaseTestCase(TestCase):
 
     def scenes_passenger_action(self, client, public_id, data, status_code=status.HTTP_201_CREATED):
         url = reverse('scenes-passenger', kwargs=dict(public_id=public_id))
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    def scenes_transportmode_action(self, client, public_id, data, status_code=status.HTTP_201_CREATED):
+        url = reverse('scenes-transport-mode', kwargs=dict(public_id=public_id))
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
@@ -307,3 +312,36 @@ class SceneAPITest(BaseTestCase):
             json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data)
 
         self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
+
+    def test_update_transport_mode(self):
+        public_id = self.scene_obj.transportmode_set.all()[0].public_id
+        data = dict(name='new name', public_id=public_id, b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2,
+                    tat=2, d=2)
+
+        with self.assertNumQueries(4):
+            json_response = self.scenes_transportmode_action(self.client, self.scene_obj.public_id, data,
+                                                             status_code=status.HTTP_200_OK)
+
+        self.assertEqual(json_response['name'], data['name'])
+        self.assertDictEqual(json_response,
+                             TransportModeSerializer(TransportMode.objects.get(public_id=public_id)).data)
+
+    def test_partial_update_transport_mode(self):
+        public_id = self.scene_obj.transportmode_set.all()[0].public_id
+        data = dict(name='new name', public_id=public_id)
+
+        with self.assertNumQueries(4):
+            json_response = self.scenes_transportmode_action(self.client, self.scene_obj.public_id, data,
+                                                             status_code=status.HTTP_200_OK)
+        self.assertEqual(json_response['name'], data['name'])
+        self.assertDictEqual(json_response,
+                             TransportModeSerializer(TransportMode.objects.get(public_id=public_id)).data)
+
+    def test_create_transport_mode(self):
+        self.scene_obj.transportmode_set.all().delete()
+
+        data = dict(name='new name', b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2)
+        with self.assertNumQueries(3):
+            json_response = self.scenes_transportmode_action(self.client, self.scene_obj.public_id, data)
+
+        self.assertDictEqual(json_response, TransportModeSerializer(TransportMode.objects.first()).data)

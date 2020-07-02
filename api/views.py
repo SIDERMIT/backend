@@ -6,8 +6,8 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer
-from storage.models import City, Scene, Passenger
+from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer
+from storage.models import City, Scene, Passenger, TransportMode
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,18 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
     def transport_mode(self, request, public_id=None):
         """ sumarize results of optimizations in all transport networks """
         scene_obj = self.get_object()
+        public_id = request.data.pop('public_id', None)
+        if public_id is None:
+            transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **request.data)
+            status_code = status.HTTP_201_CREATED
+        else:
+            transport_mode_obj = TransportMode.objects.get(public_id=public_id)
+            for attr in request.data:
+                setattr(transport_mode_obj, attr, request.data[attr])
+            transport_mode_obj.save()
+            status_code = status.HTTP_200_OK
+
+        return Response(TransportModeSerializer(transport_mode_obj).data, status_code)
 
     @action(detail=True, methods=['GET'])
     def global_results(self, request, public_id=None):
