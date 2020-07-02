@@ -51,28 +51,33 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):
+        now = timezone.now()
         new_scene_obj = self.get_object()
+
         new_scene_obj.pk = None
-        new_scene_obj.created_at = timezone.now()
+        new_scene_obj.created_at = now
         new_scene_obj.public_id = uuid.uuid4()
         new_scene_obj.save()
 
         if new_scene_obj.passenger is not None:
             passenger_obj = new_scene_obj.passenger
             passenger_obj.pk = None
-            passenger_obj.created_at = timezone.now()
+            passenger_obj.created_at = now
             passenger_obj.scene = new_scene_obj
             passenger_obj.save()
 
             new_scene_obj.passenger = passenger_obj
-
-        new_scene_obj.save()
+            new_scene_obj.save()
 
         for transport_mode_obj in self.get_object().transportmode_set.all():
             transport_mode_obj.pk = None
-            transport_mode_obj.created_at = timezone.now()
+            transport_mode_obj.created_at = now
+            transport_mode_obj.public_id = uuid.uuid4()
             transport_mode_obj.scene = new_scene_obj
             transport_mode_obj.save()
+
+        # update reference to return correct transport mode instances
+        new_scene_obj.refresh_from_db()
 
         return Response(SceneSerializer(new_scene_obj).data, status=status.HTTP_201_CREATED)
 

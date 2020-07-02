@@ -279,7 +279,7 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(Scene.objects.count(), 0)
 
     def test_duplicate_scene(self):
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(12):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)
