@@ -113,7 +113,7 @@ class OptimizationResult(models.Model):
 
 
 class OptimizationResultPerMode(models.Model):
-    optimization = models.OneToOneField(Optimization, on_delete=models.CASCADE)
+    optimization = models.ForeignKey(Optimization, on_delete=models.CASCADE)
     transport_mode = models.ForeignKey(TransportMode, on_delete=models.CASCADE)
     # optimization variables
     b = models.FloatField()
