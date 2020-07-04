@@ -70,6 +70,7 @@ class TransportNetwork(models.Model):
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
+    public_id = models.UUIDField(default=uuid.uuid4)
 
 
 class Route(models.Model):
