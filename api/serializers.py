@@ -2,7 +2,8 @@ import logging
 
 from rest_framework import serializers
 
-from storage.models import City, Scene, Passenger, TransportMode
+from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
+    Optimization, TransportNetwork
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +54,33 @@ class SceneSerializer(serializers.ModelSerializer):
         scene_obj = Scene.objects.create(city=city_obj, **validated_data)
 
         return scene_obj
+
+
+class TransportNetworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransportNetwork
+        fields = ('name', 'created_at')
+
+
+class OptimizationResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OptimizationResult
+        fields = ('vrc', 'co', 'ci', 'cu', 'tv', 'tw', 'ta', 't')
+
+
+class OptimizationResultPerModeSerializer(serializers.ModelSerializer):
+    transport_mode = serializers.SlugRelatedField(many=False, read_only=True, slug_field='name')
+
+    class Meta:
+        model = OptimizationResultPerMode
+        fields = ('b', 'k', 'l', 'transport_mode')
+
+
+class TransportNetworkOptimizationSerializer(serializers.ModelSerializer):
+    transport_network = TransportNetworkSerializer(many=False)
+    optimizationresult = OptimizationResultSerializer(many=False)
+    optimizationresultpermode_set = OptimizationResultPerModeSerializer(many=True)
+
+    class Meta:
+        model = Optimization
+        fields = ('status', 'created_at', 'transport_network', 'optimizationresult', 'optimizationresultpermode_set')

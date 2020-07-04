@@ -6,8 +6,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
-from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer
-from storage.models import City, Scene, Passenger, TransportMode
+from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
+    TransportNetworkOptimizationSerializer
+from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Optimization, OptimizationResult, \
+    OptimizationResultPerMode
 
 
 class BaseTestCase(TestCase):
@@ -43,7 +45,8 @@ class BaseTestCase(TestCase):
             return json.loads(response.content)
         return response
 
-    def create_data(self, city_number, scene_number=0, passenger=False, transport_mode_number=0):
+    def create_data(self, city_number, scene_number=0, passenger=False, transport_mode_number=0,
+                    transport_network_number=0):
         data = []
         for i in range(city_number):
             name = 'city name {0}'.format(i)
@@ -60,6 +63,9 @@ class BaseTestCase(TestCase):
                     TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), b_a=1,
                                                  co=1, c1=1, c2=1, v=1, t=1, f_max=1, k_max=1,
                                                  theta=1, tat=1, d=1, scene=scene_obj)
+
+                for p in range(transport_network_number):
+                    TransportNetwork.objects.create(scene=scene_obj, name='tn-{0}-{1}-{2}'.format(i, j, p))
 
             data.append(city_obj)
 
@@ -155,6 +161,12 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
+    def scenes_globalresults_action(self, client, public_id, status_code=status.HTTP_200_OK):
+        url = reverse('scenes-global-results', kwargs=dict(public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
 
 class CityAPITest(BaseTestCase):
 
@@ -222,7 +234,8 @@ class SceneAPITest(BaseTestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.city_obj = self.create_data(city_number=1, scene_number=1, passenger=True, transport_mode_number=2)[0]
+        self.city_obj = self.create_data(city_number=1, scene_number=1, passenger=True, transport_mode_number=2,
+                                         transport_network_number=1)[0]
         self.scene_obj = self.city_obj.scene_set.all()[0]
 
     def test_retrieve_scene_with_public_id(self):
@@ -273,7 +286,7 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(self.scene_obj.name, new_scene_name)
 
     def test_delete_scene(self):
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(12):
             self.scenes_delete(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 0)
@@ -345,3 +358,18 @@ class SceneAPITest(BaseTestCase):
             json_response = self.scenes_transportmode_action(self.client, self.scene_obj.public_id, data)
 
         self.assertDictEqual(json_response, TransportModeSerializer(TransportMode.objects.first()).data)
+
+    def test_get_global_result(self):
+        transport_network_obj = TransportNetwork.objects.first()
+
+        optimization_obj = Optimization.objects.create(transport_network=transport_network_obj,
+                                                       status=Optimization.STATUS_FINISHED)
+        OptimizationResult.objects.create(optimization=optimization_obj, vrc=2, co=2, ci=2, cu=2, tv=2, tw=2, ta=2, t=2)
+        for i, transport_mode_obj in enumerate(self.scene_obj.transportmode_set.all()):
+            OptimizationResultPerMode.objects.create(optimization=optimization_obj, transport_mode=transport_mode_obj,
+                                                     b=i, k=i, l=i)
+
+        with self.assertNumQueries(5):
+            json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
+
+        self.assertListEqual(json_response, [TransportNetworkOptimizationSerializer(optimization_obj).data])
