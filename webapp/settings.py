@@ -44,6 +44,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',
     'django_rq',
+    'rest_framework_nested',
 ]
 
 LOCAL_APPS = [

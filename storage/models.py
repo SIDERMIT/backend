@@ -77,6 +77,7 @@ class Route(models.Model):
     transport_network = models.ForeignKey(TransportNetwork, on_delete=models.CASCADE)
     transport_mode = models.ForeignKey(TransportMode, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
+    public_id = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=50)
     node_sequence_i = models.CharField(max_length=50)
     stop_sequence_i = models.CharField(max_length=50)

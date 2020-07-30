@@ -3,7 +3,7 @@ import logging
 from rest_framework import serializers
 
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
-    Optimization, TransportNetwork
+    Optimization, TransportNetwork, Route
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +56,64 @@ class SceneSerializer(serializers.ModelSerializer):
         return scene_obj
 
 
+class RouteSerializer(serializers.ModelSerializer):
+    transport_mode = TransportModeSerializer(many=False, read_only=True)
+    transport_mode_public_id = serializers.UUIDField(write_only=True)
+    transport_network_public_id = serializers.UUIDField(write_only=True)
+
+    def validate_transport_mode_public_id(self, value):
+        try:
+            transport_mode_obj = TransportMode.objects.get(public_id=value)
+        except TransportMode.DoesNotExist:
+            raise serializers.ValidationError('Transport mode does not exist')
+
+        return transport_mode_obj
+
+    def validate_transport_network_public_id(self, value):
+        try:
+            transport_network_obj = TransportNetwork.objects.get(public_id=value)
+        except TransportNetwork.DoesNotExist:
+            raise serializers.ValidationError('Transport network does not exist')
+
+        return transport_network_obj
+
+    def create(self, validated_data):
+        transport_mode_obj = validated_data.pop('transport_mode_public_id')
+        transport_network_obj = validated_data.pop('transport_network_public_id')
+        route_obj = Route.objects.create(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
+                                         **validated_data)
+
+        return route_obj
+
+    class Meta:
+        model = Route
+        fields = (
+            'created_at', 'public_id', 'name', 'node_sequence_i', 'stop_sequence_i', 'node_sequence_r',
+            'stop_sequence_r', 'transport_mode_public_id', 'transport_network_public_id', 'transport_mode')
+        read_only_fields = ['created_at', 'public_id']
+
+
 class TransportNetworkSerializer(serializers.ModelSerializer):
+    route_set = RouteSerializer(many=True, read_only=True)
+    scene_public_id = serializers.UUIDField(write_only=True)
+
+    def validate_scene_public_id(self, value):
+        try:
+            scene_obj = Scene.objects.get(public_id=value)
+        except Scene.DoesNotExist:
+            raise serializers.ValidationError('Scene does not exist')
+
+        return scene_obj
+
+    def create(self, validated_data):
+        scene_obj = validated_data.pop('scene_public_id')
+        transport_network_obj = TransportNetwork.objects.create(scene=scene_obj, **validated_data)
+
+        return transport_network_obj
+
     class Meta:
         model = TransportNetwork
-        fields = ('name', 'created_at')
+        fields = ('name', 'created_at', 'route_set', 'scene_public_id')
 
 
 class OptimizationResultSerializer(serializers.ModelSerializer):

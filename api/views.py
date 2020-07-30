@@ -7,8 +7,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
-    TransportNetworkOptimizationSerializer
-from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork
+    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
+from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
+from storage.models import Optimization
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
     @action(detail=True, methods=['POST'])
     def passenger(self, request, public_id=None):
+        """ to manage passenger data """
         # create or update passenger parameters
         scene_obj = self.get_object()
         passenger_obj, created = Passenger.objects.get_or_create(scene=scene_obj, defaults=request.data)
@@ -100,7 +102,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
     @action(detail=True, methods=['POST'])
     def transport_mode(self, request, public_id=None):
-        """ sumarize results of optimizations in all transport networks """
+        """ to manage transport modes """
         scene_obj = self.get_object()
         public_id = request.data.pop('public_id', None)
         if public_id is None:
@@ -123,8 +125,60 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         for transport_network in TransportNetwork.objects.filter(scene=scene_obj). \
                 prefetch_related('optimization__optimizationresultpermode_set__transport_mode'). \
                 select_related('optimization__optimizationresult'):
-            if transport_network.optimization is None:
-                continue
-            rows.append(TransportNetworkOptimizationSerializer(transport_network.optimization).data)
+            try:
+                rows.append(TransportNetworkOptimizationSerializer(transport_network.optimization).data)
+            except Optimization.DoesNotExist:
+                pass
 
         return Response(rows, status.HTTP_200_OK)
+
+
+class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
+                              mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """
+    API endpoint to work with transport networks
+    """
+    serializer_class = TransportNetworkSerializer
+    lookup_field = 'public_id'
+    queryset = TransportNetwork.objects.prefetch_related('route_set__transport_mode')
+
+    @action(detail=True, methods=['POST'])
+    def duplicate(self, request, public_id=None):
+        now = timezone.now()
+        new_transport_network_obj = self.get_object()
+
+        new_transport_network_obj.pk = None
+        new_transport_network_obj.created_at = now
+        new_transport_network_obj.public_id = uuid.uuid4()
+        new_transport_network_obj.save()
+
+        for route_obj in self.get_object().route_set.all():
+            route_obj.pk = None
+            route_obj.transport_network = new_transport_network_obj
+            route_obj.created_at = now
+            route_obj.save()
+
+        # update reference to return correct transport mode instances
+        new_transport_network_obj.refresh_from_db()
+
+        return Response(TransportNetworkSerializer(new_transport_network_obj).data, status=status.HTTP_201_CREATED)
+
+
+class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
+                   mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """
+    API endpoint to work with Route
+    """
+    serializer_class = RouteSerializer
+    lookup_field = 'public_id'
+    queryset = Route.objects.prefetch_related('transport_mode')
+
+    def create(self, request, *args, **kwargs):
+        parent_key = 'transport_network_public_id'
+        request.data[parent_key] = kwargs[parent_key]
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        parent_key = 'transport_network_public_id'
+        request.data[parent_key] = kwargs[parent_key]
+        return super().update(request, *args, **kwargs)

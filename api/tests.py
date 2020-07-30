@@ -7,9 +7,9 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
-    TransportNetworkOptimizationSerializer
+    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Optimization, OptimizationResult, \
-    OptimizationResultPerMode
+    OptimizationResultPerMode, Route
 
 
 class BaseTestCase(TestCase):
@@ -46,7 +46,7 @@ class BaseTestCase(TestCase):
         return response
 
     def create_data(self, city_number, scene_number=0, passenger=False, transport_mode_number=0,
-                    transport_network_number=0):
+                    transport_network_number=0, route_number=0):
         data = []
         for i in range(city_number):
             name = 'city name {0}'.format(i)
@@ -59,13 +59,21 @@ class BaseTestCase(TestCase):
                 if passenger:
                     Passenger.objects.create(name='p-{0}-{1}'.format(i, j), va=1, pv=1, pw=1, pa=1,
                                              pt=1, spv=1, spw=1, spa=1, spt=1, scene=scene_obj)
+
+                transport_mode_obj_list = []
                 for k in range(transport_mode_number):
-                    TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), b_a=1,
-                                                 co=1, c1=1, c2=1, v=1, t=1, f_max=1, k_max=1,
-                                                 theta=1, tat=1, d=1, scene=scene_obj)
+                    transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), b_a=1,
+                                                                      co=1, c1=1, c2=1, v=1, t=1, f_max=1, k_max=1,
+                                                                      theta=1, tat=1, d=1, scene=scene_obj)
+                    transport_mode_obj_list.append(transport_mode_obj)
 
                 for p in range(transport_network_number):
-                    TransportNetwork.objects.create(scene=scene_obj, name='tn-{0}-{1}-{2}'.format(i, j, p))
+                    transport_network_obj = TransportNetwork.objects.create(scene=scene_obj,
+                                                                            name='tn-{0}-{1}-{2}'.format(i, j, p))
+                    for q in range(route_number):
+                        Route.objects.create(transport_network=transport_network_obj, name='route {0}'.format(q),
+                                             transport_mode=transport_mode_obj_list[0], node_sequence_i='1,2,3',
+                                             stop_sequence_i='1,3', node_sequence_r='3,2,1', stop_sequence_r='3,1')
 
             data.append(city_obj)
 
@@ -166,6 +174,83 @@ class BaseTestCase(TestCase):
         data = dict()
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    # transport network helpers
+
+    def transport_network_create(self, client, data, status_code=status.HTTP_201_CREATED):
+        url = reverse('transport-networks-list')
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_retrieve(self, client, public_id, status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-detail', kwargs=dict(public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_update(self, client, public_id, data, status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-detail', kwargs=dict(public_id=public_id))
+
+        return self._make_request(client, self.PUT_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_partial_update(self, client, public_id, fields, status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-detail', kwargs=dict(public_id=public_id))
+        data = fields
+
+        return self._make_request(client, self.PATCH_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_delete(self, client, public_id, status_code=status.HTTP_204_NO_CONTENT):
+        url = reverse('transport-networks-detail', kwargs=dict(public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.DELETE_REQUEST, url, data, status_code, format='json',
+                                  json_process=False)
+
+    def transport_network_duplicate_action(self, client, public_id, status_code=status.HTTP_201_CREATED):
+        url = reverse('transport-networks-duplicate', kwargs=dict(public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    # route helpers
+
+    def transport_network_route_create(self, client, transport_network_public_id, data,
+                                       status_code=status.HTTP_201_CREATED):
+        url = reverse('routes-list', kwargs=dict(transport_network_public_id=transport_network_public_id))
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_route_retrieve(self, client, transport_network_public_id, public_id,
+                                         status_code=status.HTTP_200_OK):
+        url = reverse('routes-detail',
+                      kwargs=dict(transport_network_public_id=transport_network_public_id, public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_route_update(self, client, transport_network_public_id, public_id, data,
+                                       status_code=status.HTTP_200_OK):
+        url = reverse('routes-detail',
+                      kwargs=dict(transport_network_public_id=transport_network_public_id, public_id=public_id))
+
+        return self._make_request(client, self.PUT_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_route_partial_update(self, client, transport_network_public_id, public_id, fields,
+                                               status_code=status.HTTP_200_OK):
+        url = reverse('routes-detail',
+                      kwargs=dict(transport_network_public_id=transport_network_public_id, public_id=public_id))
+        data = fields
+
+        return self._make_request(client, self.PATCH_REQUEST, url, data, status_code, format='json')
+
+    def transport_network_route_delete(self, client, transport_network_public_id, public_id,
+                                       status_code=status.HTTP_204_NO_CONTENT):
+        url = reverse('routes-detail',
+                      kwargs=dict(transport_network_public_id=transport_network_public_id, public_id=public_id))
+        data = dict()
+
+        return self._make_request(client, self.DELETE_REQUEST, url, data, status_code, format='json',
+                                  json_process=False)
 
 
 class CityAPITest(BaseTestCase):
@@ -369,7 +454,151 @@ class SceneAPITest(BaseTestCase):
             OptimizationResultPerMode.objects.create(optimization=optimization_obj, transport_mode=transport_mode_obj,
                                                      b=i, k=i, l=i)
 
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
         self.assertListEqual(json_response, [TransportNetworkOptimizationSerializer(optimization_obj).data])
+
+    def test_get_global_result_without_optimization_data(self):
+        with self.assertNumQueries(3):
+            json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
+
+        self.assertListEqual(json_response, [])
+
+
+class TransportNetworkAPITest(BaseTestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.city_obj = self.create_data(city_number=1, scene_number=1, passenger=True, transport_mode_number=2,
+                                         transport_network_number=1, route_number=1)[0]
+        self.scene_obj = self.city_obj.scene_set.all()[0]
+        self.transport_network_obj = TransportNetwork.objects.first()
+
+    def test_retrieve_transport_network_with_public_id(self):
+        with self.assertNumQueries(3):
+            json_response = self.transport_network_retrieve(self.client, self.transport_network_obj.public_id)
+
+        self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
+
+    def test_create_transport_network(self):
+        fields = dict(name='scene name', scene_public_id=self.scene_obj.public_id)
+        with self.assertNumQueries(3):
+            self.transport_network_create(self.client, fields)
+
+        self.assertEqual(TransportNetwork.objects.count(), 2)
+        self.assertEqual(Scene.objects.count(), 1)
+
+    def test_create_transport_network_with_wrong_scene_id(self):
+        wrong_scene_id_list = ['not_uuid_value', str(uuid.uuid4())]
+        num_queries_expected_list = [0, 1]
+        for wrong_city_id, num_queries_expected in zip(wrong_scene_id_list, num_queries_expected_list):
+            fields = dict(name='scene name', scene_public_id=wrong_city_id)
+            with self.assertNumQueries(num_queries_expected):
+                self.transport_network_create(self.client, fields, status_code=status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(TransportNetwork.objects.count(), 1)
+        self.assertEqual(Scene.objects.count(), 1)
+
+    def test_update_transport_network(self):
+        new_scene_name = 'name2'
+        new_data = dict(name=new_scene_name, scene_public_id=self.scene_obj.public_id)
+        with self.assertNumQueries(7):
+            json_response = self.transport_network_update(self.client, self.transport_network_obj.public_id, new_data)
+
+        self.transport_network_obj.refresh_from_db()
+        self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
+        self.assertEqual(self.transport_network_obj.name, new_scene_name)
+
+    def test_partial_update_transport_network(self):
+        new_scene_name = 'name2'
+        new_data = dict(name=new_scene_name)
+        with self.assertNumQueries(6):
+            json_response = self.transport_network_partial_update(self.client, self.transport_network_obj.public_id,
+                                                                  new_data)
+
+        self.transport_network_obj.refresh_from_db()
+        self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
+        self.assertEqual(self.transport_network_obj.name, new_scene_name)
+
+    def test_delete_transport_network(self):
+        with self.assertNumQueries(8):
+            self.transport_network_delete(self.client, self.transport_network_obj.public_id)
+
+        self.assertEqual(TransportNetwork.objects.count(), 0)
+
+    def test_duplicate_transport_network(self):
+        with self.assertNumQueries(11):
+            json_response = self.transport_network_duplicate_action(self.client, self.transport_network_obj.public_id)
+
+        self.assertEqual(TransportNetwork.objects.count(), 2)
+        self.assertDictEqual(json_response,
+                             TransportNetworkSerializer(TransportNetwork.objects.order_by('-created_at').first()).data)
+
+    def test_create_route(self):
+        data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
+                    stop_sequence_r='6,5,4', transport_mode_public_id=TransportMode.objects.first().public_id)
+        with self.assertNumQueries(3):
+            json_response = self.transport_network_route_create(self.client, self.transport_network_obj.public_id, data)
+
+        self.assertEqual(Route.objects.count(), 2)
+        self.assertDictEqual(json_response, RouteSerializer(Route.objects.order_by('-id').first()).data)
+
+    def test_create_route_but_transport_network_does_not_exist(self):
+        data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
+                    stop_sequence_r='6,5,4', transport_mode_public_id=TransportMode.objects.first().public_id)
+        with self.assertNumQueries(2):
+            json_response = self.transport_network_route_create(self.client, uuid.uuid4(), data,
+                                                                status_code=status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(Route.objects.count(), 1)
+        self.assertIn('Transport network does not exist', json_response['transport_network_public_id'][0])
+
+    def test_create_route_but_transport_mode_does_not_exist(self):
+        data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
+                    stop_sequence_r='6,5,4', transport_mode_public_id=uuid.uuid4())
+        with self.assertNumQueries(2):
+            json_response = self.transport_network_route_create(self.client, self.transport_network_obj.public_id, data,
+                                                                status_code=status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(Route.objects.count(), 1)
+        self.assertIn('Transport mode does not exist', json_response['transport_mode_public_id'][0])
+
+    def test_update_route(self):
+        public_id = self.transport_network_obj.route_set.all()[0].public_id
+        transport_mode_obj = TransportMode.objects.first()
+        data = dict(name='new name', public_id=str(public_id), node_sequence_i='1,2,3', stop_sequence_i='1,3',
+                    node_sequence_r='3,2,1', stop_sequence_r='e,1',
+                    transport_mode_public_id=str(transport_mode_obj.public_id))
+
+        with self.assertNumQueries(5):
+            json_response = self.transport_network_route_update(self.client, self.transport_network_obj.public_id,
+                                                                public_id, data, status_code=status.HTTP_200_OK)
+
+        self.assertEqual(Route.objects.count(), 1)
+        for key in data.keys():
+            # this key is not present in answer
+            if key not in ['transport_mode_public_id']:
+                self.assertEqual(json_response[key], data[key])
+            else:
+                self.assertEqual(json_response['transport_mode'], TransportModeSerializer(transport_mode_obj).data)
+        self.assertDictEqual(json_response, RouteSerializer(Route.objects.get(public_id=public_id)).data)
+
+    def test_partial_update_route(self):
+        public_id = self.transport_network_obj.route_set.all()[0].public_id
+        data = dict(name='new name', public_id=public_id)
+
+        with self.assertNumQueries(4):
+            json_response = self.transport_network_route_partial_update(self.client,
+                                                                        self.transport_network_obj.public_id,
+                                                                        public_id, data, status_code=status.HTTP_200_OK)
+        self.assertEqual(json_response['name'], data['name'])
+        self.assertDictEqual(json_response, RouteSerializer(Route.objects.get(public_id=public_id)).data)
+
+    def test_delete_route(self):
+        public_id = Route.objects.first().public_id
+
+        with self.assertNumQueries(4):
+            self.transport_network_route_delete(self.client, self.transport_network_obj.public_id, public_id)
+
+        self.assertEqual(Route.objects.count(), 0)
