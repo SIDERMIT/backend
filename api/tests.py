@@ -543,12 +543,6 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertEqual(TransportNetwork.objects.count(), 2)
         self.assertEqual(Scene.objects.count(), 1)
 
-    def test_retrieve_transport_network(self):
-        with self.assertNumQueries(3):
-            json_response = self.transport_network_retrieve(self.client, self.transport_network_obj.public_id)
-
-        self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
-
     def test_create_transport_network_with_wrong_scene_id(self):
         wrong_scene_id_list = ['not_uuid_value', str(uuid.uuid4())]
         num_queries_expected_list = [0, 1]
@@ -662,3 +656,12 @@ class TransportNetworkAPITest(BaseTestCase):
             self.transport_network_route_delete(self.client, self.transport_network_obj.public_id, public_id)
 
         self.assertEqual(Route.objects.count(), 0)
+
+    def test_retrieve_route(self):
+        route_obj = Route.objects.first()
+
+        with self.assertNumQueries(2):
+            json_response = self.transport_network_route_retrieve(self.client, self.transport_network_obj.public_id,
+                                                                  route_obj.public_id)
+
+        self.assertDictEqual(json_response, RouteSerializer(route_obj).data)
