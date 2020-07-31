@@ -3,7 +3,7 @@ import uuid
 
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
@@ -196,3 +196,43 @@ class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         parent_key = 'transport_network_public_id'
         request.data[parent_key] = kwargs[parent_key]
         return super().update(request, *args, **kwargs)
+
+
+@api_view()
+def recent_optimizations(request):
+    return Response({})
+
+
+@api_view()
+def validate_graph_parameters(request):
+    return Response({})
+
+
+@api_view()
+def validate_graph_file(request):
+    return Response({})
+
+
+@api_view()
+def validate_matrix_parameters(request):
+    return Response({})
+
+
+@api_view()
+def validate_matrix_parameters(request):
+    return Response({})
+
+
+@api_view()
+def validate_transport_mode(request):
+    return Response({})
+
+
+@api_view()
+def validate_passenger(request):
+    return Response({})
+
+
+@api_view()
+def validate_route(request):
+    return Response({})

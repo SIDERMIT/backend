@@ -665,3 +665,18 @@ class TransportNetworkAPITest(BaseTestCase):
                                                                   route_obj.public_id)
 
         self.assertDictEqual(json_response, RouteSerializer(route_obj).data)
+
+
+class ValidationAPITest(BaseTestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        # TODO: finish this
+
+    def validate_route(self, client, data, status_code=status.HTTP_200_OK):
+        url = reverse('validate-route')
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def test_validate_route(self):
+        json_response = self.validate_route(self.client, dict())
+        print(json_response)
