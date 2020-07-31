@@ -100,23 +100,6 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
         return Response(PassengerSerializer(passenger_obj).data, status_code)
 
-    @action(detail=True, methods=['POST'])
-    def transport_mode(self, request, public_id=None):
-        """ to manage transport modes """
-        scene_obj = self.get_object()
-        public_id = request.data.pop('public_id', None)
-        if public_id is None:
-            transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **request.data)
-            status_code = status.HTTP_201_CREATED
-        else:
-            transport_mode_obj = TransportMode.objects.get(public_id=public_id)
-            for attr in request.data:
-                setattr(transport_mode_obj, attr, request.data[attr])
-            transport_mode_obj.save()
-            status_code = status.HTTP_200_OK
-
-        return Response(TransportModeSerializer(transport_mode_obj).data, status_code)
-
     @action(detail=True, methods=['GET'])
     def global_results(self, request, public_id=None):
         """ summarize results of optimizations in all transport networks """
@@ -131,6 +114,26 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
                 pass
 
         return Response(rows, status.HTTP_200_OK)
+
+
+class TransportModeViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
+                           mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """
+    API endpoint to work with transport modes
+    """
+    serializer_class = TransportModeSerializer
+    lookup_field = 'public_id'
+    queryset = TransportMode.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        parent_key = 'scene_public_id'
+        request.data[parent_key] = kwargs[parent_key]
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        parent_key = 'scene_public_id'
+        request.data[parent_key] = kwargs[parent_key]
+        return super().update(request, *args, **kwargs)
 
 
 class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
