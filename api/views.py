@@ -166,6 +166,17 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
 
         return Response(TransportNetworkSerializer(new_transport_network_obj).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['POST'])
+    def create_default_routes(self, request, public_id=None):
+        """ create defaults routes """
+        transport_network_obj = self.get_object()
+
+        # TODO: use sidermit library to create route in database and after that return list of objects
+        # Route.objects.create()
+        rows = []
+
+        return Response(rows, status.HTTP_200_OK)
+
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
                    mixins.CreateModelMixin, viewsets.GenericViewSet):
