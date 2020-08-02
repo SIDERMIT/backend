@@ -302,7 +302,7 @@ class CityAPITest(BaseTestCase):
     def test_create_city(self):
         fields = dict(name='city name', graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
                       beta=1)
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
@@ -311,7 +311,7 @@ class CityAPITest(BaseTestCase):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name, graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
                         beta=1)
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(7):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
@@ -321,7 +321,7 @@ class CityAPITest(BaseTestCase):
     def test_partial_update_city(self):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name)
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(7):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()

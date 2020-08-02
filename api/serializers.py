@@ -12,8 +12,9 @@ class CitySerializer(serializers.ModelSerializer):
     class Meta:
         model = City
         fields = (
-            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta')
-        read_only_fields = ['created_at', 'public_id']
+            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
+            'scene_set')
+        read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
 class PassengerSerializer(serializers.ModelSerializer):
