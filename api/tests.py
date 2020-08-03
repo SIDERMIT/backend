@@ -46,7 +46,7 @@ class BaseTestCase(TestCase):
         return response
 
     def create_data(self, city_number, scene_number=0, passenger=False, transport_mode_number=0,
-                    transport_network_number=0, route_number=0):
+                    transport_network_number=0, route_number=0, add_optimization_to_transport_network=False):
         data = []
         for i in range(city_number):
             name = 'city name {0}'.format(i)
@@ -70,6 +70,9 @@ class BaseTestCase(TestCase):
                 for p in range(transport_network_number):
                     transport_network_obj = TransportNetwork.objects.create(scene=scene_obj,
                                                                             name='tn-{0}-{1}-{2}'.format(i, j, p))
+                    if add_optimization_to_transport_network:
+                        Optimization.objects.create(transport_network=transport_network_obj)
+
                     for q in range(route_number):
                         Route.objects.create(transport_network=transport_network_obj, name='route {0}'.format(q),
                                              transport_mode=transport_mode_obj_list[0], node_sequence_i='1,2,3',
@@ -277,6 +280,14 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.DELETE_REQUEST, url, data, status_code, format='json',
                                   json_process=False)
+
+    # recent optimizations
+
+    def recent_optimizations_list(self, client, status_code=status.HTTP_200_OK):
+        url = reverse('recent-optimizations')
+        data = dict()
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
 
 class CityAPITest(BaseTestCase):
@@ -676,6 +687,25 @@ class TransportNetworkAPITest(BaseTestCase):
                                                                   route_obj.public_id)
 
         self.assertDictEqual(json_response, RouteSerializer(route_obj).data)
+
+
+class RecentOptimizationsAPITest(BaseTestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.create_data(city_number=1, scene_number=1, transport_network_number=5,
+                         add_optimization_to_transport_network=True)
+
+    def test_get_recent_optimizations(self):
+        with self.assertNumQueries(1):
+            json_response = self.recent_optimizations_list(self.client)
+
+        self.assertEqual(4, len(json_response))
+        # check fields
+        fields = ['status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id']
+        for opt in json_response:
+            for field_name in fields:
+                self.assertIn(field_name, opt)
 
 
 class ValidationAPITest(BaseTestCase):

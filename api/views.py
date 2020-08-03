@@ -7,7 +7,7 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
-    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
+    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
 from storage.models import Optimization
 
@@ -211,7 +211,8 @@ class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
 @api_view()
 def recent_optimizations(request):
-    return Response([])
+    optimizations = Optimization.objects.select_related('transport_network__scene__city').order_by('-created_at')[:4]
+    return Response(RecentOptimizationSerializer(optimizations, many=True).data)
 
 
 @api_view()
