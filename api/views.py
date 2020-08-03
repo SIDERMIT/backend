@@ -211,7 +211,7 @@ class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
 @api_view()
 def recent_optimizations(request):
-    return Response({})
+    return Response([])
 
 
 @api_view()
