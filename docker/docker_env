@@ -4,6 +4,7 @@ SECRET_KEY=lr8rv+=r%lpk4$-=i71viu+etjdfng8^&_2)o#c0@i+uugy*b^
 DEBUG=True
 
 ALLOWED_HOSTS=127.0.0.1,localhost
+CORS_ORIGIN_WHITELIST=http://localhost:8080
 
 DB_NAME=webapp
 DB_USER=webapp
