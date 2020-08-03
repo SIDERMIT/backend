@@ -333,7 +333,7 @@ class CityAPITest(BaseTestCase):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name, graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
                         beta=1)
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(10):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
@@ -343,7 +343,7 @@ class CityAPITest(BaseTestCase):
     def test_partial_update_city(self):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name)
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(10):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
@@ -373,7 +373,7 @@ class SceneAPITest(BaseTestCase):
         self.scene_obj = self.city_obj.scene_set.all()[0]
 
     def test_retrieve_scene_with_public_id(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             json_response = self.scenes_retrieve(self.client, self.scene_obj.public_id)
 
         self.assertIsNotNone(json_response['passenger'])
@@ -382,7 +382,7 @@ class SceneAPITest(BaseTestCase):
 
     def test_create_scene(self):
         fields = dict(name='scene name', city_public_id=self.city_obj.public_id)
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             self.scenes_create(self.client, fields)
 
         self.assertEqual(Scene.objects.count(), 2)
@@ -402,7 +402,7 @@ class SceneAPITest(BaseTestCase):
     def test_update_scene(self):
         new_scene_name = 'name2'
         new_data = dict(name=new_scene_name, city_public_id=self.city_obj.public_id)
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(7):
             json_response = self.scenes_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -412,7 +412,7 @@ class SceneAPITest(BaseTestCase):
     def test_partial_update_scene(self):
         new_scene_name = 'name2'
         new_data = dict(name=new_scene_name)
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(6):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -426,7 +426,7 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(Scene.objects.count(), 0)
 
     def test_duplicate_scene(self):
-        with self.assertNumQueries(12):
+        with self.assertNumQueries(13):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)

@@ -8,15 +8,6 @@ from storage.models import City, Scene, Passenger, TransportMode, OptimizationRe
 logger = logging.getLogger(__name__)
 
 
-class CitySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = City
-        fields = (
-            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
-            'scene_set')
-        read_only_fields = ['created_at', 'public_id', 'scene_set']
-
-
 class PassengerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Passenger
@@ -47,31 +38,6 @@ class TransportModeSerializer(serializers.ModelSerializer):
             'name', 'created_at', 'public_id', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd',
             'scene_public_id')
         read_only_fields = ['created_at', 'public_id']
-
-
-class SceneSerializer(serializers.ModelSerializer):
-    passenger = PassengerSerializer(read_only=True)
-    transportmode_set = TransportModeSerializer(many=True, read_only=True)
-    city_public_id = serializers.UUIDField(write_only=True)
-
-    class Meta:
-        model = Scene
-        fields = ('public_id', 'created_at', 'name', 'passenger', 'transportmode_set', 'city_public_id')
-        read_only_fields = ['created_at', 'public_id']
-
-    def validate_city_public_id(self, value):
-        try:
-            city_obj = City.objects.get(public_id=value)
-        except City.DoesNotExist:
-            raise serializers.ValidationError('City does not exist')
-
-        return city_obj
-
-    def create(self, validated_data):
-        city_obj = validated_data.pop('city_public_id')
-        scene_obj = Scene.objects.create(city=city_obj, **validated_data)
-
-        return scene_obj
 
 
 class RouteSerializer(serializers.ModelSerializer):
@@ -132,6 +98,45 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransportNetwork
         fields = ('name', 'created_at', 'route_set', 'scene_public_id')
+
+
+class SceneSerializer(serializers.ModelSerializer):
+    passenger = PassengerSerializer(read_only=True)
+    transportmode_set = TransportModeSerializer(many=True, read_only=True)
+    city_public_id = serializers.UUIDField(write_only=True)
+    transportnetwork_set = TransportNetworkSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Scene
+        fields = (
+            'public_id', 'created_at', 'name', 'passenger', 'transportmode_set', 'city_public_id',
+            'transportnetwork_set')
+        read_only_fields = ['created_at', 'public_id']
+
+    def validate_city_public_id(self, value):
+        try:
+            city_obj = City.objects.get(public_id=value)
+        except City.DoesNotExist:
+            raise serializers.ValidationError('City does not exist')
+
+        return city_obj
+
+    def create(self, validated_data):
+        city_obj = validated_data.pop('city_public_id')
+        scene_obj = Scene.objects.create(city=city_obj, **validated_data)
+
+        return scene_obj
+
+
+class CitySerializer(serializers.ModelSerializer):
+    scene_set = SceneSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = City
+        fields = (
+            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
+            'scene_set')
+        read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
 class OptimizationResultSerializer(serializers.ModelSerializer):
