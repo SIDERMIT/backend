@@ -22,7 +22,18 @@ class CityViewSet(viewsets.ModelViewSet):
     lookup_field = 'public_id'
     queryset = City.objects.prefetch_related('scene_set__transportmode_set',
                                              'scene_set__passenger',
-                                             'scene_set__transportnetwork_set')
+                                             'scene_set__transportnetwork_set').order_by('created_at')
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        limit = self.request.query_params.get('limit')
+        if limit is not None:
+            try:
+                queryset = queryset[:int(limit)]
+            except ValueError:
+                pass
+
+        return queryset
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):

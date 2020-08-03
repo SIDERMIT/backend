@@ -81,9 +81,8 @@ class BaseTestCase(TestCase):
 
     # city helpers
 
-    def cities_list(self, client, status_code=status.HTTP_200_OK):
+    def cities_list(self, client, data, status_code=status.HTTP_200_OK):
         url = reverse('cities-list')
-        data = dict()
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
@@ -288,10 +287,22 @@ class CityAPITest(BaseTestCase):
 
     def test_retrieve_city_list(self):
         with self.assertNumQueries(5):
-            json_response = self.cities_list(self.client)
+            json_response = self.cities_list(self.client, dict())
 
         self.assertEqual(len(json_response), 1)
         self.assertDictEqual(json_response[0], CitySerializer(self.city_obj).data)
+
+    def test_retrieve_city_list_with_filter_param(self):
+        with self.assertNumQueries(0):
+            json_response = self.cities_list(self.client, dict(limit=0))
+
+        self.assertEqual(len(json_response), 0)
+
+    def test_retrieve_city_list_but_limit_param_is_not_int(self):
+        with self.assertNumQueries(5):
+            json_response = self.cities_list(self.client, dict(limit='fake_number'))
+
+        self.assertEqual(len(json_response), 1)
 
     def test_retrieve_city_with_public_id(self):
         with self.assertNumQueries(5):
