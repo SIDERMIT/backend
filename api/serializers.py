@@ -169,7 +169,9 @@ class RecentOptimizationSerializer(serializers.ModelSerializer):
     scene_name = serializers.CharField(read_only=True, source='transport_network.scene.name')
     scene_public_id = serializers.CharField(read_only=True, source='transport_network.scene.public_id')
     city_name = serializers.CharField(read_only=True, source='transport_network.scene.city.name')
+    city_public_id = serializers.CharField(read_only=True, source='transport_network.scene.city.public_id')
 
     class Meta:
         model = Optimization
-        fields = ('status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id')
+        fields = (
+        'status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id', 'city_public_id')

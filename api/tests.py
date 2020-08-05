@@ -702,7 +702,8 @@ class RecentOptimizationsAPITest(BaseTestCase):
 
         self.assertEqual(4, len(json_response))
         # check fields
-        fields = ['status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id']
+        fields = ['status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id',
+                  'city_public_id']
         for opt in json_response:
             for field_name in fields:
                 self.assertIn(field_name, opt)
