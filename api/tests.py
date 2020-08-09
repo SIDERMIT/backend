@@ -329,6 +329,20 @@ class CityAPITest(BaseTestCase):
 
         self.assertEqual(City.objects.count(), 2)
 
+    def test_create_city_with_parameters(self):
+        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='nodes 2')
+        with self.assertNumQueries(2):
+            self.cities_create(self.client, fields)
+
+        self.assertEqual(City.objects.count(), 2)
+
+    def test_create_city_from_file(self):
+        fields = dict(name='city name', graph='nodes 2')
+        with self.assertNumQueries(2):
+            self.cities_create(self.client, fields)
+
+        self.assertEqual(City.objects.count(), 2)
+
     def test_update_city(self):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name, graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
