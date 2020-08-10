@@ -124,6 +124,11 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
+    def cities_build_graph_file_action(self, client, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-build-graph-file')
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
     # scene helper
 
     def scenes_create(self, client, data, status_code=status.HTTP_201_CREATED):
@@ -330,7 +335,7 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(City.objects.count(), 2)
 
     def test_create_city_with_parameters(self):
-        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='nodes 2')
+        fields = dict(name='city name', n=1, p=1, l=1, g=1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
@@ -376,6 +381,16 @@ class CityAPITest(BaseTestCase):
 
         self.assertEqual(City.objects.count(), 2)
         self.assertDictEqual(json_response, CitySerializer(City.objects.order_by('-created_at').first()).data)
+
+    def test_build_graph_file_city(self):
+        data = dict(n=1, l=1, p=1, g=1)
+        with self.assertNumQueries(0):
+            json_response = self.cities_build_graph_file_action(self.client, data)
+
+        from sidermit.city.graph import Graph
+        Graph.parameters_validator()
+
+        self.assertDictEqual(json_response, dict(pajek='asad'))
 
 
 class SceneAPITest(BaseTestCase):

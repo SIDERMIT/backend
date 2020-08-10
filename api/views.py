@@ -52,6 +52,15 @@ class CityViewSet(viewsets.ModelViewSet):
 
         return Response(CitySerializer(new_city_obj).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['GET'])
+    def build_graph_file(self, request):
+        n = request.data.get('n')
+        l = request.data.get('l')
+        p = request.data.get('p')
+        g = request.data.get('g')
+
+        return Response({'pajek': 'asad'}, status.HTTP_200_OK)
+
 
 class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
                    mixins.CreateModelMixin, viewsets.GenericViewSet):
