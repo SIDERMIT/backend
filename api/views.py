@@ -72,6 +72,8 @@ class CityViewSet(viewsets.ModelViewSet):
             os.remove(filename)
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
+        except TypeError:
+            raise ParseError('Parameter can not be empty')
 
         return Response({'pajek': content}, status.HTTP_200_OK)
 

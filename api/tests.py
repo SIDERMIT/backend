@@ -408,6 +408,12 @@ class CityAPITest(BaseTestCase):
                                                             status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('n cannot be a negative number', json_response['detail'])
 
+    def test_build_graph_file_without_parameters_city(self):
+        with self.assertNumQueries(0):
+            json_response = self.cities_build_graph_file_action(self.client, dict(),
+                                                                status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Parameter can not be empty', json_response['detail'])
+
 
 class SceneAPITest(BaseTestCase):
 
