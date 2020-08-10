@@ -383,14 +383,30 @@ class CityAPITest(BaseTestCase):
         self.assertDictEqual(json_response, CitySerializer(City.objects.order_by('-created_at').first()).data)
 
     def test_build_graph_file_city(self):
-        data = dict(n=1, l=1, p=1, g=1)
+        data = dict(n=1, l=1.0, p=1.0, g=1.0)
         with self.assertNumQueries(0):
             json_response = self.cities_build_graph_file_action(self.client, data)
 
-        from sidermit.city.graph import Graph
-        Graph.parameters_validator()
+        expected_content_file = '*vertices 3\n0 CBD 0 0 CBD 0 1.0\n1 P_1 2.0 0.0 P 1 1.0\n2 SC_1 1.0 0.0 SC 1 1.0\n'
+        self.assertDictEqual(json_response, dict(pajek=expected_content_file))
 
-        self.assertDictEqual(json_response, dict(pajek='asad'))
+    def test_build_graph_file_with_wrong_parameters_city(self):
+        data = dict(n=1, l=1.0, p=1.0, g=1.0)
+        for index, key in enumerate(['n', 'l', 'p', 'g']):
+            new_data = data.copy()
+            new_data[key] = 'asdasd'
+            with self.assertNumQueries(0):
+                json_response = self.cities_build_graph_file_action(self.client, new_data,
+                                                                    status_code=status.HTTP_400_BAD_REQUEST)
+            if index == 0:
+                self.assertIn('invalid literal', json_response['detail'])
+            else:
+                self.assertIn('could not convert string to float', json_response['detail'])
+
+        data['n'] = -1
+        json_response = self.cities_build_graph_file_action(self.client, data,
+                                                            status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('n cannot be a negative number', json_response['detail'])
 
 
 class SceneAPITest(BaseTestCase):
