@@ -45,6 +45,7 @@ class CityViewSet(viewsets.ModelViewSet):
         new_city_obj.id = None
         new_city_obj.created_at = timezone.now()
         new_city_obj.public_id = uuid.uuid4()
+        new_city_obj.name = '{0} copy'.format(new_city_obj.name)
         new_city_obj.save()
 
         for scene_obj in new_city_obj.scene_set.all():

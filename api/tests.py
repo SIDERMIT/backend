@@ -335,7 +335,7 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(City.objects.count(), 2)
 
     def test_create_city_with_parameters(self):
-        fields = dict(name='city name', n=1, p=1, l=1, g=1)
+        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='pajek content')
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
