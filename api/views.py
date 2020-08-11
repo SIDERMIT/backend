@@ -8,6 +8,7 @@ from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from sidermit.city import Graph, GraphContentFormat
 from sidermit.exceptions import SIDERMITException
+from api.utils import get_network_descriptor
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
@@ -64,14 +65,15 @@ class CityViewSet(viewsets.ModelViewSet):
             p = float(request.query_params.get('p'))
             g = float(request.query_params.get('g'))
 
-            city_obj = Graph.build_from_parameters(n, l, g, p, None, None, None, None, None)
-            content = city_obj.export_graph(GraphContentFormat.PAJEK)
+            graph_obj = Graph.build_from_parameters(n, l, g, p, None, None, None, None, None)
+            content = graph_obj.export_graph(GraphContentFormat.PAJEK)
+            network = get_network_descriptor(graph_obj)
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
         except TypeError:
             raise ParseError('Parameter can not be empty')
 
-        return Response({'pajek': content}, status.HTTP_200_OK)
+        return Response({'pajek': content, 'network': network}, status.HTTP_200_OK)
 
 
 class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,

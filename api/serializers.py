@@ -4,6 +4,7 @@ from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat
 from sidermit.exceptions import SIDERMITException
 
+from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
     Optimization, TransportNetwork, Route
 
@@ -142,25 +143,14 @@ class CitySerializer(serializers.ModelSerializer):
         graph_obj = None
         try:
             graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
-        except (SIDERMITException, TypeError) as e:
+        except (SIDERMITException, TypeError):
             try:
                 graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
-            except SIDERMITException as e:
+            except SIDERMITException:
                 pass
 
         if graph_obj is not None:
-            nodes = []
-            for node_obj in graph_obj.get_nodes():
-                node_descriptor = dict(name=node_obj.name, id=node_obj.id, x=node_obj.x, y=node_obj.y)
-                nodes.append(node_descriptor)
-
-            edges = []
-            for edge_obj in graph_obj.get_edges():
-                edge_descriptor = dict(id=edge_obj.id, source=edge_obj.node1.id, target=edge_obj.node2.id)
-                edges.append(edge_descriptor)
-
-            content['nodes'] = nodes
-            content['edges'] = edges
+            content = get_network_descriptor(graph_obj)
 
         return content
 

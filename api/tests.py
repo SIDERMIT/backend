@@ -388,7 +388,12 @@ class CityAPITest(BaseTestCase):
             json_response = self.cities_build_graph_file_action(self.client, data)
 
         expected_content_file = '*vertices 3\n0 CBD 0 0 CBD 0 1.0\n1 P_1 2.0 0.0 P 1 1.0\n2 SC_1 1.0 0.0 SC 1 1.0\n'
-        self.assertDictEqual(json_response, dict(pajek=expected_content_file))
+        excepted_network_data = {
+            'nodes': [{'name': 'CBD', 'id': 0, 'x': 0, 'y': 0}, {'name': 'P_1', 'id': 1, 'x': 2.0, 'y': 0.0},
+                      {'name': 'SC_1', 'id': 2, 'x': 1.0, 'y': 0.0}],
+            'edges': [{'id': 1, 'source': 1, 'target': 2}, {'id': 2, 'source': 2, 'target': 1},
+                      {'id': 3, 'source': 2, 'target': 0}, {'id': 4, 'source': 0, 'target': 2}]}
+        self.assertDictEqual(json_response, dict(pajek=expected_content_file, network=excepted_network_data))
 
     def test_build_graph_file_with_wrong_parameters_city(self):
         data = dict(n=1, l=1.0, p=1.0, g=1.0)
