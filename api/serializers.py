@@ -1,6 +1,8 @@
 import logging
 
 from rest_framework import serializers
+from sidermit.city import Graph, GraphContentFormat
+from sidermit.exceptions import SIDERMITException
 
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
     Optimization, TransportNetwork, Route
@@ -130,12 +132,43 @@ class SceneSerializer(serializers.ModelSerializer):
 
 class CitySerializer(serializers.ModelSerializer):
     scene_set = SceneSerializer(many=True, read_only=True)
+    network_descriptor = serializers.SerializerMethodField()
+
+    def get_network_descriptor(self, obj):
+        """
+        :return: list of nodes and edges based on parameters or graph variable
+        """
+        content = dict(nodes=[], edges=[])
+        graph_obj = None
+        try:
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+        except (SIDERMITException, TypeError) as e:
+            try:
+                graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
+            except SIDERMITException as e:
+                pass
+
+        if graph_obj is not None:
+            nodes = []
+            for node_obj in graph_obj.get_nodes():
+                node_descriptor = dict(name=node_obj.name, id=node_obj.id, x=node_obj.x, y=node_obj.y)
+                nodes.append(node_descriptor)
+
+            edges = []
+            for edge_obj in graph_obj.get_edges():
+                edge_descriptor = dict(id=edge_obj.id, source=edge_obj.node1.id, destination=edge_obj.node2.id)
+                edges.append(edge_descriptor)
+
+            content['nodes'] = nodes
+            content['edges'] = edges
+
+        return content
 
     class Meta:
         model = City
         fields = (
             'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
-            'scene_set')
+            'scene_set', 'network_descriptor')
         read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
@@ -174,4 +207,5 @@ class RecentOptimizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Optimization
         fields = (
-        'status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id', 'city_public_id')
+            'status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id',
+            'city_public_id')

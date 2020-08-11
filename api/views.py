@@ -1,5 +1,4 @@
 import logging
-import os
 import uuid
 
 from django.utils import timezone
@@ -7,7 +6,7 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
-from sidermit.city import Graph
+from sidermit.city import Graph, GraphContentFormat
 from sidermit.exceptions import SIDERMITException
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
@@ -66,11 +65,7 @@ class CityViewSet(viewsets.ModelViewSet):
             g = float(request.query_params.get('g'))
 
             city_obj = Graph.build_from_parameters(n, l, g, p, None, None, None, None, None)
-            filename = str(uuid.uuid4())
-            city_obj.graph_to_pajek(filename)
-            with open(filename, 'r') as file_obj:
-                content = file_obj.read()
-            os.remove(filename)
+            content = city_obj.export_graph(GraphContentFormat.PAJEK)
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
         except TypeError:
