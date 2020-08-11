@@ -13,7 +13,7 @@ class City(models.Model):
     graph = models.TextField(null=False)
     demand_matrix = ArrayField(ArrayField(models.IntegerField()), null=True)
     # graph parameters
-    n = models.FloatField(null=True)
+    n = models.IntegerField(null=True)
     p = models.FloatField(null=True)
     l = models.FloatField(null=True)
     g = models.FloatField(null=True)
