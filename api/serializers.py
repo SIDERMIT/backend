@@ -156,7 +156,7 @@ class CitySerializer(serializers.ModelSerializer):
 
             edges = []
             for edge_obj in graph_obj.get_edges():
-                edge_descriptor = dict(id=edge_obj.id, source=edge_obj.node1.id, destination=edge_obj.node2.id)
+                edge_descriptor = dict(id=edge_obj.id, source=edge_obj.node1.id, target=edge_obj.node2.id)
                 edges.append(edge_descriptor)
 
             content['nodes'] = nodes
