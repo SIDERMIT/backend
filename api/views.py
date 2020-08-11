@@ -98,7 +98,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         new_scene_obj.public_id = uuid.uuid4()
         new_scene_obj.save()
 
-        if new_scene_obj.passenger is not None:
+        try:
             passenger_obj = new_scene_obj.passenger
             passenger_obj.pk = None
             passenger_obj.created_at = now
@@ -107,6 +107,8 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
             new_scene_obj.passenger = passenger_obj
             new_scene_obj.save()
+        except Passenger.DoesNotExist:
+            pass
 
         for transport_mode_obj in self.get_object().transportmode_set.all():
             transport_mode_obj.pk = None

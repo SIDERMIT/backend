@@ -483,6 +483,15 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(Scene.objects.count(), 2)
         self.assertDictEqual(json_response, SceneSerializer(Scene.objects.order_by('-created_at').first()).data)
 
+    def test_duplicate_scene_without_passenger(self):
+        self.scene_obj.passenger.delete()
+
+        with self.assertNumQueries(11):
+            json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
+
+        self.assertEqual(Scene.objects.count(), 2)
+        self.assertDictEqual(json_response, SceneSerializer(Scene.objects.order_by('-created_at').first()).data)
+
     def test_update_passenger(self):
         data = dict(name='new name', va=2, pv=2, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
 
