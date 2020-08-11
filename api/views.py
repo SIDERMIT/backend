@@ -96,6 +96,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         new_scene_obj.pk = None
         new_scene_obj.created_at = now
         new_scene_obj.public_id = uuid.uuid4()
+        new_scene_obj.name = '{0} copy'.format(new_scene_obj.name)
         new_scene_obj.save()
 
         try:
