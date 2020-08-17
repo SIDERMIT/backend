@@ -39,7 +39,7 @@ class TransportModeSerializer(serializers.ModelSerializer):
         model = TransportMode
         fields = (
             'name', 'created_at', 'public_id', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd',
-            'scene_public_id')
+            'scene_public_id', 'f_ini')
         read_only_fields = ['created_at', 'public_id']
 
 

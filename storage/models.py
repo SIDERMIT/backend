@@ -59,6 +59,7 @@ class TransportMode(models.Model):
     c2 = models.FloatField()
     v = models.FloatField()
     t = models.FloatField()
+    f_ini = models.FloatField()
     f_max = models.FloatField()
     k_max = models.FloatField()
     theta = models.FloatField()

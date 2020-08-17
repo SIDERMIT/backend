@@ -67,7 +67,7 @@ class BaseTestCase(TestCase):
                 for k in range(transport_mode_number):
                     transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), b_a=1,
                                                                       co=1, c1=1, c2=1, v=1, t=1, f_max=1, k_max=1,
-                                                                      theta=1, tat=1, d=1, scene=scene_obj)
+                                                                      theta=1, tat=1, d=1, f_ini=1, scene=scene_obj)
                     transport_mode_obj_list.append(transport_mode_obj)
 
                 for p in range(transport_network_number):
@@ -618,7 +618,7 @@ class SceneAPITest(BaseTestCase):
     def test_create_transport_mode(self):
         self.scene_obj.transportmode_set.all().delete()
 
-        data = dict(name='new name', b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2)
+        data = dict(name='new name', b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2, f_ini=2)
         with self.assertNumQueries(2):
             json_response = self.scenes_transportmode_create(self.client, self.scene_obj.public_id, data)
 
@@ -647,7 +647,7 @@ class SceneAPITest(BaseTestCase):
     def test_update_transport_mode(self):
         public_id = self.scene_obj.transportmode_set.all()[0].public_id
         data = dict(name='new name', public_id=str(public_id), b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2,
-                    theta=2, tat=2, d=2)
+                    theta=2, tat=2, d=2, f_ini=2)
 
         with self.assertNumQueries(3):
             json_response = self.scenes_transportmode_update(self.client, self.scene_obj.public_id, public_id, data)
