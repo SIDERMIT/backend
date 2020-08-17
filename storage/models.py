@@ -11,7 +11,7 @@ class City(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=50)
     graph = models.TextField(null=False)
-    demand_matrix = ArrayField(ArrayField(models.IntegerField()), null=True)
+    demand_matrix = ArrayField(ArrayField(models.FloatField()), null=True)
     # graph parameters
     n = models.IntegerField(null=True)
     p = models.FloatField(null=True)
