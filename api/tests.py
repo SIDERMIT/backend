@@ -334,47 +334,53 @@ class CityAPITest(BaseTestCase):
 
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
 
-    def test_create_city(self):
-        fields = dict(name='city name', graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
-                      beta=1)
+    def test_create_city_graph(self):
+        fields = dict(name='city name', graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
 
-    def test_create_city_with_parameters(self):
-        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='pajek content')
+    def test_create_city_graph_with_parameters(self):
+        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='pajek content', step=CitySerializer.STEP_1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
 
-    def test_create_city_from_file(self):
+    def test_create_city_graph_from_file(self):
         graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
-        fields = dict(name='city name', graph=graph_content)
+        fields = dict(name='city name', graph=graph_content, step=CitySerializer.STEP_1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
 
-    def test_create_city_from_file_but_file_has_wrong_format(self):
-        fields = dict(name='city name', graph='wrong pajek format')
+    def test_create_city_graph_from_file_but_file_has_wrong_format(self):
+        fields = dict(name='city name', graph='wrong pajek format', step=CitySerializer.STEP_1)
         with self.assertNumQueries(0):
             json_response = self.cities_create(self.client, fields, status_code=status.HTTP_400_BAD_REQUEST)
 
-        self.assertIn('number of lines', json_response[0])
+        self.assertIn('number of lines', json_response['non_field_errors'][0])
         self.assertEqual(City.objects.count(), 1)
 
-    def test_update_city(self):
+    def test_update_city_step_1(self):
         new_city_name = 'name2'
-        new_data = dict(name=new_city_name, graph='nodes 2', demand_matrix=None, n=1, p=1, l=1, g=1, y=1, a=1, alpha=1,
-                        beta=1)
+        new_data = dict(name=new_city_name, graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
         with self.assertNumQueries(10):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
         self.assertEqual(self.city_obj.name, new_city_name)
+
+    def test_partial_update_city_step2(self):
+        new_data = dict(demand_matrix=[[1, 1], [1, 1]], y=1, a=1, alpha=0.1, beta=0.2, step=CitySerializer.STEP_2)
+        with self.assertNumQueries(11):
+            json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
+
+        self.city_obj.refresh_from_db()
+        self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
 
     def test_partial_update_city(self):
         new_city_name = 'name2'

@@ -1,7 +1,7 @@
 import logging
 
 from rest_framework import serializers
-from sidermit.city import Graph, GraphContentFormat
+from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
 
 from api.utils import get_network_descriptor
@@ -134,42 +134,58 @@ class SceneSerializer(serializers.ModelSerializer):
 class CitySerializer(serializers.ModelSerializer):
     scene_set = SceneSerializer(many=True, read_only=True)
     network_descriptor = serializers.SerializerMethodField()
+    STEP_1 = 'step1'
+    STEP_2 = 'step2'
+    step = serializers.ChoiceField(write_only=True, choices=[(STEP_1, 'Step 1'), (STEP_2, 'Step 2')])
 
-    def validate(self, data):
+    def validate(self, validated_data):
 
-        # TODO: si vienen los parámetros, validar que genera un grafo correcto con la librería sidermit,
-        # si viene solo el grafo, validar que se puede construir el objecto ciudad
-        # si viene los parámetros de la matriz, verificar que se puede construir la matriz y hace match con la matriz
-        # adjunta. Si solo viene la matriz verificar los datos generando el objecto demand
-        if data is None:
-            # TODO: create graph file from sidermit library
-            a = self.get_initial()
-            print(a)
-            value = 'graph file'
+        if validated_data.get('step') == self.STEP_1:
+            key_exists = []
+            keys = ['n', 'l', 'g', 'p']
+            for key in keys:
+                key_exists.append(validated_data.get(key) is None)
 
-        return data
+            try:
+                if all(key_exists):
+                    # if all keys are none, there are not parameters but graph has to exist
+                    Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
+                else:
+                    # all parameters has to exist and the graph result has to match with parameters
+                    if validated_data['graph'] != Graph.build_from_parameters(validated_data.get('n'),
+                                                                              validated_data.get('l'),
+                                                                              validated_data.get('g'),
+                                                                              validated_data.get('p')):
+                        serializers.ValidationError('Graph description does not match with parameters')
+            except SIDERMITException as e:
+                raise serializers.ValidationError(e)
 
-    def create(self, validated_data):
-        key_exists = []
-        keys = ['n', 'l', 'g', 'p']
-        for key in keys:
-            key_exists.append(validated_data.get(key) is None)
+        elif validated_data.get('step') == self.STEP_2:
+            key_exists = []
+            keys = ['y', 'a', 'alpha', 'beta']
+            for key in keys:
+                key_exists.append(validated_data.get(key) is None)
 
-        try:
-            if all(key_exists):
-                # if all keys are none, there are not parameters but graph has to exist
-                Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
-            else:
-                # all parameters has to exist and the graph result has to match with parameters
-                if validated_data['graph'] != Graph.build_from_parameters(validated_data.get('n'),
-                                                                          validated_data.get('l'),
-                                                                          validated_data.get('g'),
-                                                                          validated_data.get('p')):
-                    serializers.ValidationError('Graph description does not match with parameters')
-        except SIDERMITException as e:
-            raise serializers.ValidationError(e)
+            try:
+                public_id = self.context['view'].kwargs['public_id']
+                graph_obj = Graph.build_from_content(City.objects.only('graph').get(public_id=public_id).graph,
+                                                     GraphContentFormat.PAJEK)
+                if all(key_exists):
+                    # if all keys are none, there are not parameters but graph has to exist
+                    Demand.build_from_parameters(graph_obj, validated_data.get('y'), validated_data.get('a'),
+                                                 validated_data.get('alpha'), validated_data.get('beta'))
+                else:
+                    # all parameters has to exist and the graph result has to match with parameters
+                    if validated_data['demand_matrix'] != Demand.build_from_parameters(graph_obj,
+                                                                                       validated_data.get('y'),
+                                                                                       validated_data.get('a'),
+                                                                                       validated_data.get('alpha'),
+                                                                                       validated_data.get('beta')):
+                        serializers.ValidationError('Graph description does not match with parameters')
+            except SIDERMITException as e:
+                raise serializers.ValidationError(e)
 
-        return super().create(validated_data)
+        return validated_data
 
     def get_network_descriptor(self, obj):
         """
@@ -186,11 +202,15 @@ class CitySerializer(serializers.ModelSerializer):
 
         return content
 
+    def create(self, validated_data):
+        validated_data.pop('step')
+        return super().create(validated_data)
+
     class Meta:
         model = City
         fields = (
             'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
-            'scene_set', 'network_descriptor')
+            'scene_set', 'network_descriptor', 'step')
         read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
