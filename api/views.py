@@ -88,7 +88,16 @@ class CityViewSet(viewsets.ModelViewSet):
 
             demand_obj = Demand.build_from_parameters(graph_obj, y, a, alpha, beta)
 
-            demand_matrix_data = demand_obj.get_matrix()
+            demand_matrix = demand_obj.get_matrix()
+            # pass matrix dict to list of list
+            demand_matrix_data = []
+            size = len(demand_matrix.keys())
+            for i in range(size):
+                row = []
+                for j in range(size):
+                    row.append(demand_matrix[str(i)][str(j)])
+                demand_matrix_data.append(row)
+
             demand_matrix_header = [node_obj.name for node_obj in graph_obj.get_nodes()]
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
