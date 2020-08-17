@@ -134,6 +134,7 @@ class SceneSerializer(serializers.ModelSerializer):
 class CitySerializer(serializers.ModelSerializer):
     scene_set = SceneSerializer(many=True, read_only=True)
     network_descriptor = serializers.SerializerMethodField()
+    matrix_header = serializers.SerializerMethodField()
     STEP_1 = 'step1'
     STEP_2 = 'step2'
     step = serializers.ChoiceField(write_only=True, choices=[(STEP_1, 'Step 1'), (STEP_2, 'Step 2')])
@@ -202,6 +203,19 @@ class CitySerializer(serializers.ModelSerializer):
 
         return content
 
+    def get_matrix_header(self, obj):
+        content = []
+        try:
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+        except (SIDERMITException, TypeError):
+            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
+
+        if graph_obj is not None:
+            for node_obj in graph_obj.get_nodes():
+                content.append(node_obj.name)
+
+        return content
+
     def create(self, validated_data):
         validated_data.pop('step')
         return super().create(validated_data)
@@ -210,7 +224,7 @@ class CitySerializer(serializers.ModelSerializer):
         model = City
         fields = (
             'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
-            'scene_set', 'network_descriptor', 'step')
+            'scene_set', 'network_descriptor', 'matrix_header', 'step')
         read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
