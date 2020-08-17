@@ -6,12 +6,12 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
-from sidermit.city import Graph, GraphContentFormat
+from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
-from api.utils import get_network_descriptor
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
+from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
 from storage.models import Optimization
 
@@ -74,6 +74,29 @@ class CityViewSet(viewsets.ModelViewSet):
             raise ParseError('Parameter can not be empty')
 
         return Response({'pajek': content, 'network': network}, status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def build_matrix_file(self, request, public_id=None):
+        try:
+            y = int(request.query_params.get('y'))
+            a = float(request.query_params.get('a'))
+            alpha = float(request.query_params.get('alpha'))
+            beta = float(request.query_params.get('beta'))
+
+            city_obj = self.get_object()
+            graph_obj = Graph.build_from_content(city_obj.graph, GraphContentFormat.PAJEK)
+
+            demand_obj = Demand.build_from_parameters(graph_obj, y, a, alpha, beta)
+
+            demand_matrix_data = demand_obj.get_matrix()
+            demand_matrix_header = [node_obj.name for node_obj in graph_obj.get_nodes()]
+        except (ValueError, SIDERMITException) as e:
+            raise ParseError(e)
+        except TypeError:
+            raise ParseError('Parameter can not be empty')
+
+        return Response({'demand_matrix': demand_matrix_data, 'demand_matrix_header': demand_matrix_header},
+                        status.HTTP_200_OK)
 
 
 class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,

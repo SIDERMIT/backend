@@ -135,19 +135,51 @@ class CitySerializer(serializers.ModelSerializer):
     scene_set = SceneSerializer(many=True, read_only=True)
     network_descriptor = serializers.SerializerMethodField()
 
+    def validate(self, data):
+
+        # TODO: si vienen los parámetros, validar que genera un grafo correcto con la librería sidermit,
+        # si viene solo el grafo, validar que se puede construir el objecto ciudad
+        # si viene los parámetros de la matriz, verificar que se puede construir la matriz y hace match con la matriz
+        # adjunta. Si solo viene la matriz verificar los datos generando el objecto demand
+        if data is None:
+            # TODO: create graph file from sidermit library
+            a = self.get_initial()
+            print(a)
+            value = 'graph file'
+
+        return data
+
+    def create(self, validated_data):
+        key_exists = []
+        keys = ['n', 'l', 'g', 'p']
+        for key in keys:
+            key_exists.append(validated_data.get(key) is None)
+
+        try:
+            if all(key_exists):
+                # if all keys are none, there are not parameters but graph has to exist
+                Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
+            else:
+                # all parameters has to exist and the graph result has to match with parameters
+                if validated_data['graph'] != Graph.build_from_parameters(validated_data.get('n'),
+                                                                          validated_data.get('l'),
+                                                                          validated_data.get('g'),
+                                                                          validated_data.get('p')):
+                    serializers.ValidationError('Graph description does not match with parameters')
+        except SIDERMITException as e:
+            raise serializers.ValidationError(e)
+
+        return super().create(validated_data)
+
     def get_network_descriptor(self, obj):
         """
         :return: list of nodes and edges based on parameters or graph variable
         """
         content = dict(nodes=[], edges=[])
-        graph_obj = None
         try:
             graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
         except (SIDERMITException, TypeError):
-            try:
-                graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
-            except SIDERMITException:
-                pass
+            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
 
         if graph_obj is not None:
             content = get_network_descriptor(graph_obj)

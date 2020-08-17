@@ -5,6 +5,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
+from sidermit.city import Graph, GraphContentFormat
 
 from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
@@ -50,9 +51,11 @@ class BaseTestCase(TestCase):
         data = []
         for i in range(city_number):
             name = 'city name {0}'.format(i)
-            graph = 'Nodes 1\n1 node1 12\n2 node2 12'
+            n, l, g, p = 4, 2, 3, 4
+            graph_obj = Graph.build_from_parameters(n, l, g, p)
             matrix = [[1, 2], [1, 2]]
-            city_obj = City.objects.create(name=name, graph=graph, demand_matrix=matrix)
+            city_obj = City.objects.create(name=name, graph=graph_obj.export_graph(GraphContentFormat.PAJEK),
+                                           n=n, l=l, g=g, p=p, demand_matrix=matrix)
 
             for j in range(scene_number):
                 scene_obj = Scene.objects.create(name='s{0}-{1}'.format(i, j), city=city_obj)
@@ -126,6 +129,11 @@ class BaseTestCase(TestCase):
 
     def cities_build_graph_file_action(self, client, data, status_code=status.HTTP_200_OK):
         url = reverse('cities-build-graph-file')
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def cities_build_matrix_file_action(self, client, public_id, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-build-matrix-file', kwargs=dict(public_id=public_id))
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
@@ -342,11 +350,20 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(City.objects.count(), 2)
 
     def test_create_city_from_file(self):
-        fields = dict(name='city name', graph='nodes 2')
+        graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
+        fields = dict(name='city name', graph=graph_content)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
+
+    def test_create_city_from_file_but_file_has_wrong_format(self):
+        fields = dict(name='city name', graph='wrong pajek format')
+        with self.assertNumQueries(0):
+            json_response = self.cities_create(self.client, fields, status_code=status.HTTP_400_BAD_REQUEST)
+
+        self.assertIn('number of lines', json_response[0])
+        self.assertEqual(City.objects.count(), 1)
 
     def test_update_city(self):
         new_city_name = 'name2'
@@ -418,6 +435,56 @@ class CityAPITest(BaseTestCase):
         with self.assertNumQueries(0):
             json_response = self.cities_build_graph_file_action(self.client, dict(),
                                                                 status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Parameter can not be empty', json_response['detail'])
+
+    def test_build_matrix_file_city(self):
+        data = dict(y=1, a=1.0, alpha=0.1, beta=0.8)
+        with self.assertNumQueries(5):
+            json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, data)
+
+        expected_demand_matrix_file = {'0': {'0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0},
+                                       '1': {'0': 0.025, '1': 0, '2': 0.2, '3': 0, '4': 0.008333333333333331, '5': 0,
+                                             '6': 0.008333333333333331, '7': 0, '8': 0.008333333333333331},
+                                       '2': {'0': 0.0, '1': 0, '2': 0, '3': 0, '4': 0.0, '5': 0, '6': 0.0, '7': 0,
+                                             '8': 0.0},
+                                       '3': {'0': 0.025, '1': 0, '2': 0.008333333333333331, '3': 0, '4': 0.2, '5': 0,
+                                             '6': 0.008333333333333331, '7': 0, '8': 0.008333333333333331},
+                                       '4': {'0': 0.0, '1': 0, '2': 0.0, '3': 0, '4': 0, '5': 0, '6': 0.0, '7': 0,
+                                             '8': 0.0}, '5': {'0': 0.025, '1': 0, '2': 0.008333333333333331, '3': 0,
+                                                              '4': 0.008333333333333331, '5': 0, '6': 0.2, '7': 0,
+                                                              '8': 0.008333333333333331},
+                                       '6': {'0': 0.0, '1': 0, '2': 0.0, '3': 0, '4': 0.0, '5': 0, '6': 0, '7': 0,
+                                             '8': 0.0}, '7': {'0': 0.025, '1': 0, '2': 0.008333333333333331, '3': 0,
+                                                              '4': 0.008333333333333331, '5': 0,
+                                                              '6': 0.008333333333333331, '7': 0, '8': 0.2},
+                                       '8': {'0': 0.0, '1': 0, '2': 0.0, '3': 0, '4': 0.0, '5': 0, '6': 0.0, '7': 0,
+                                             '8': 0}}
+        excepted_demand_matrix_header = ['CBD', 'P_1', 'SC_1', 'P_2', 'SC_2', 'P_3', 'SC_3', 'P_4', 'SC_4']
+        self.assertDictEqual(json_response, dict(demand_matrix=expected_demand_matrix_file,
+                                                 demand_matrix_header=excepted_demand_matrix_header))
+
+    def test_build_matrix_file_with_wrong_parameters_city(self):
+        data = dict(y=1, a=1.0, alpha=0.4, beta=0.8)
+        for index, key in enumerate(['y', 'a', 'alpha', 'beta']):
+            new_data = data.copy()
+            new_data[key] = 'asdasd'
+            with self.assertNumQueries(0):
+                json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, new_data,
+                                                                     status_code=status.HTTP_400_BAD_REQUEST)
+            if index == 0:
+                self.assertIn('invalid literal', json_response['detail'])
+            else:
+                self.assertIn('could not convert string to float', json_response['detail'])
+
+        data['y'] = -1
+        json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, data,
+                                                             status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('y must be positive', json_response['detail'])
+
+    def test_build_matrix_file_without_parameters_city(self):
+        with self.assertNumQueries(0):
+            json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, dict(),
+                                                                 status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('Parameter can not be empty', json_response['detail'])
 
 
