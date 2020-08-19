@@ -32,8 +32,6 @@ class Scene(models.Model):
 
 
 class Passenger(models.Model):
-    created_at = models.DateTimeField(default=timezone.now)
-    name = models.CharField(max_length=50)
     scene = models.OneToOneField(Scene, on_delete=models.CASCADE)
     # passenger variables
     va = models.FloatField()
