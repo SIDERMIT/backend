@@ -138,7 +138,7 @@ class BaseCitySerializer(serializers.ModelSerializer):
 class ShortCitySerializer(BaseCitySerializer):
     class Meta:
         model = City
-        fields = ('public_id', 'name', 'demand_matrix', 'y', 'a', 'alpha', 'beta', 'network_descriptor',
+        fields = ('public_id', 'name', 'demand_matrix', 'n', 'y', 'a', 'alpha', 'beta', 'network_descriptor',
                   'demand_matrix_header')
 
 
