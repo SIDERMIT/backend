@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 class PassengerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Passenger
-        fields = ('name', 'created_at', 'va', 'pv', 'pw', 'pa', 'pt', 'spv', 'spw', 'spa', 'spt')
-        read_only_fields = ['created_at']
+        fields = ('va', 'pv', 'pw', 'pa', 'pt', 'spv', 'spw', 'spa', 'spt')
 
 
 class TransportModeSerializer(serializers.ModelSerializer):
@@ -103,17 +102,58 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
         fields = ('name', 'created_at', 'route_set', 'scene_public_id')
 
 
+class BaseCitySerializer(serializers.ModelSerializer):
+    network_descriptor = serializers.SerializerMethodField()
+    demand_matrix_header = serializers.SerializerMethodField()
+
+    def get_network_descriptor(self, obj):
+        """
+        :return: list of nodes and edges based on parameters or graph variable
+        """
+        content = dict(nodes=[], edges=[])
+        try:
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+        except (SIDERMITException, TypeError):
+            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
+
+        if graph_obj is not None:
+            content = get_network_descriptor(graph_obj)
+
+        return content
+
+    def get_demand_matrix_header(self, obj):
+        content = []
+        try:
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+        except (SIDERMITException, TypeError):
+            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
+
+        if graph_obj is not None:
+            for node_obj in graph_obj.get_nodes():
+                content.append(node_obj.name)
+
+        return content
+
+
+class ShortCitySerializer(BaseCitySerializer):
+    class Meta:
+        model = City
+        fields = ('public_id', 'name', 'demand_matrix', 'y', 'a', 'alpha', 'beta', 'network_descriptor',
+                  'demand_matrix_header')
+
+
 class SceneSerializer(serializers.ModelSerializer):
-    passenger = PassengerSerializer(read_only=True)
+    passenger = PassengerSerializer()
     transportmode_set = TransportModeSerializer(many=True, read_only=True)
     city_public_id = serializers.UUIDField(write_only=True)
     transportnetwork_set = TransportNetworkSerializer(many=True, read_only=True)
+    city = ShortCitySerializer(read_only=True)
 
     class Meta:
         model = Scene
         fields = (
             'public_id', 'created_at', 'name', 'passenger', 'transportmode_set', 'city_public_id',
-            'transportnetwork_set')
+            'transportnetwork_set', 'city')
         read_only_fields = ['created_at', 'public_id']
 
     def validate_city_public_id(self, value):
@@ -126,15 +166,20 @@ class SceneSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         city_obj = validated_data.pop('city_public_id')
+        passenger_data = validated_data.pop('passenger')
         scene_obj = Scene.objects.create(city=city_obj, **validated_data)
+        Passenger.objects.create(scene=scene_obj, **passenger_data)
 
         return scene_obj
 
+    def update(self, instance, validated_data):
+        # we do not update passenger data
+        validated_data.pop('passenger')
+        return super().update(instance, validated_data)
 
-class CitySerializer(serializers.ModelSerializer):
+
+class CitySerializer(BaseCitySerializer):
     scene_set = SceneSerializer(many=True, read_only=True)
-    network_descriptor = serializers.SerializerMethodField()
-    demand_matrix_header = serializers.SerializerMethodField()
     STEP_1 = 'step1'
     STEP_2 = 'step2'
     step = serializers.ChoiceField(write_only=True, choices=[(STEP_1, 'Step 1'), (STEP_2, 'Step 2')])
@@ -187,34 +232,6 @@ class CitySerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(e)
 
         return validated_data
-
-    def get_network_descriptor(self, obj):
-        """
-        :return: list of nodes and edges based on parameters or graph variable
-        """
-        content = dict(nodes=[], edges=[])
-        try:
-            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
-        except (SIDERMITException, TypeError):
-            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
-
-        if graph_obj is not None:
-            content = get_network_descriptor(graph_obj)
-
-        return content
-
-    def get_demand_matrix_header(self, obj):
-        content = []
-        try:
-            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
-        except (SIDERMITException, TypeError):
-            graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
-
-        if graph_obj is not None:
-            for node_obj in graph_obj.get_nodes():
-                content.append(node_obj.name)
-
-        return content
 
     def create(self, validated_data):
         validated_data.pop('step')

@@ -115,7 +115,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
     """
     serializer_class = SceneSerializer
     lookup_field = 'public_id'
-    queryset = Scene.objects.select_related('passenger').prefetch_related('transportmode_set')
+    queryset = Scene.objects.select_related('passenger', 'city').prefetch_related('transportmode_set')
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):
@@ -151,23 +151,6 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         new_scene_obj.refresh_from_db()
 
         return Response(SceneSerializer(new_scene_obj).data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['POST'])
-    def passenger(self, request, public_id=None):
-        """ to manage passenger data """
-        # create or update passenger parameters
-        scene_obj = self.get_object()
-        passenger_obj, created = Passenger.objects.get_or_create(scene=scene_obj, defaults=request.data)
-
-        if created:
-            status_code = status.HTTP_201_CREATED
-        else:
-            for attr in request.data:
-                setattr(passenger_obj, attr, request.data[attr])
-            passenger_obj.save()
-            status_code = status.HTTP_200_OK
-
-        return Response(PassengerSerializer(passenger_obj).data, status_code)
 
     @action(detail=True, methods=['GET'])
     def global_results(self, request, public_id=None):
