@@ -178,16 +178,6 @@ class TransportModeViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, 
     lookup_field = 'public_id'
     queryset = TransportMode.objects.all()
 
-    def create(self, request, *args, **kwargs):
-        parent_key = 'scene_public_id'
-        request.data[parent_key] = kwargs[parent_key]
-        return super().create(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        parent_key = 'scene_public_id'
-        request.data[parent_key] = kwargs[parent_key]
-        return super().update(request, *args, **kwargs)
-
 
 class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
                               mixins.CreateModelMixin, viewsets.GenericViewSet):

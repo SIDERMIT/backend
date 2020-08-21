@@ -615,13 +615,13 @@ class SceneAPITest(BaseTestCase):
     def test_create_transport_mode_but_scene_does_not_exist(self):
         self.scene_obj.transportmode_set.all().delete()
 
-        data = dict(name='new name', b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2)
+        data = dict(name='new name', f_ini=1, b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2)
         with self.assertNumQueries(1):
             json_response = self.scenes_transportmode_create(self.client, uuid.uuid4(), data,
                                                              status_code=status.HTTP_400_BAD_REQUEST)
 
         self.assertEqual(TransportMode.objects.count(), 0)
-        self.assertIn('Scene does not exist', json_response['scene_public_id'][0])
+        self.assertIn('Scene does not exist', json_response[0])
 
     def test_retrieve_transport_mode(self):
         transport_mode_obj = self.scene_obj.transportmode_set.all()[0]
@@ -637,7 +637,7 @@ class SceneAPITest(BaseTestCase):
         data = dict(name='new name', public_id=str(public_id), b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2,
                     theta=2, tat=2, d=2, f_ini=2)
 
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(2):
             json_response = self.scenes_transportmode_update(self.client, self.scene_obj.public_id, public_id, data)
         for key in data.keys():
             self.assertEqual(json_response[key], data[key])
@@ -648,7 +648,7 @@ class SceneAPITest(BaseTestCase):
         public_id = self.scene_obj.transportmode_set.all()[0].public_id
         data = dict(name='new name', public_id=public_id)
 
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(2):
             json_response = self.scenes_transportmode_partial_update(self.client, self.scene_obj.public_id, public_id,
                                                                      data)
         self.assertEqual(json_response['name'], data['name'])

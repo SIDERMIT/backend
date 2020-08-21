@@ -18,18 +18,13 @@ class PassengerSerializer(serializers.ModelSerializer):
 
 
 class TransportModeSerializer(serializers.ModelSerializer):
-    scene_public_id = serializers.UUIDField(write_only=True)
 
-    def validate_scene_public_id(self, value):
+    def create(self, validated_data):
         try:
-            scene_obj = Scene.objects.get(public_id=value)
+            scene_obj = Scene.objects.get(public_id=self.context['view'].kwargs['scene_public_id'])
         except Scene.DoesNotExist:
             raise serializers.ValidationError('Scene does not exist')
 
-        return scene_obj
-
-    def create(self, validated_data):
-        scene_obj = validated_data.pop('scene_public_id')
         transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **validated_data)
 
         return transport_mode_obj
@@ -38,7 +33,7 @@ class TransportModeSerializer(serializers.ModelSerializer):
         model = TransportMode
         fields = (
             'name', 'created_at', 'public_id', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd',
-            'scene_public_id', 'f_ini')
+            'f_ini')
         read_only_fields = ['created_at', 'public_id']
 
 
