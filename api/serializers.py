@@ -174,8 +174,14 @@ class SceneSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # we do not update passenger data
-        validated_data.pop('passenger')
-        return super().update(instance, validated_data)
+        passenger_data = validated_data.pop('passenger')
+        scene_obj = super().update(instance, validated_data)
+
+        passenger_serializer = PassengerSerializer(scene_obj.passenger, data=passenger_data, partial=True)
+        passenger_serializer.is_valid(raise_exception=True)
+        passenger_serializer.save()
+
+        return scene_obj
 
 
 class CitySerializer(BaseCitySerializer):

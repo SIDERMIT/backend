@@ -7,7 +7,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 from sidermit.city import Graph, GraphContentFormat
 
-from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
+from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Optimization, OptimizationResult, \
     OptimizationResultPerMode, Route
@@ -170,11 +170,6 @@ class BaseTestCase(TestCase):
     def scenes_duplicate_action(self, client, public_id, status_code=status.HTTP_201_CREATED):
         url = reverse('scenes-duplicate', kwargs=dict(public_id=public_id))
         data = dict()
-
-        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
-
-    def scenes_passenger_action(self, client, public_id, data, status_code=status.HTTP_201_CREATED):
-        url = reverse('scenes-passenger', kwargs=dict(public_id=public_id))
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
@@ -528,7 +523,7 @@ class SceneAPITest(BaseTestCase):
         new_scene_name = 'name2'
         passenger_data = dict(va=0, pv=0, pw=0, pa=0, pt=0, spv=0, spw=0, spa=0, spt=0)
         new_data = dict(name=new_scene_name, city_public_id=self.city_obj.public_id, passenger=passenger_data)
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(10):
             json_response = self.scenes_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -537,8 +532,8 @@ class SceneAPITest(BaseTestCase):
 
     def test_partial_update_scene(self):
         new_scene_name = 'name2'
-        new_data = dict(name=new_scene_name)
-        with self.assertNumQueries(6):
+        new_data = dict(name=new_scene_name, passenger=dict())
+        with self.assertNumQueries(9):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -546,13 +541,13 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(self.scene_obj.name, new_scene_name)
 
     def test_delete_scene(self):
-        with self.assertNumQueries(12):
+        with self.assertNumQueries(14):
             self.scenes_delete(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 0)
 
     def test_duplicate_scene(self):
-        with self.assertNumQueries(14):
+        with self.assertNumQueries(18):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)
@@ -561,39 +556,31 @@ class SceneAPITest(BaseTestCase):
     def test_duplicate_scene_without_passenger(self):
         self.scene_obj.passenger.delete()
 
-        with self.assertNumQueries(12):
+        with self.assertNumQueries(16):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)
         self.assertDictEqual(json_response, SceneSerializer(Scene.objects.order_by('-created_at').first()).data)
 
     def test_update_passenger(self):
-        data = dict(name='new name', va=2, pv=2, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
+        passenger_data = dict(va=3, pv=3, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
+        scene_data = dict(passenger=passenger_data)
+        with self.assertNumQueries(9):
+            json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
+                                                       status_code=status.HTTP_200_OK)
 
-        with self.assertNumQueries(4):
-            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data,
-                                                         status_code=status.HTTP_200_OK)
-
-        self.assertEqual(json_response['name'], data['name'])
-        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
+        self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
+        self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
 
     def test_partial_update_passenger(self):
-        data = dict(name='new name')
+        passenger_data = dict(va=3)
+        scene_data = dict(passenger=passenger_data)
 
-        with self.assertNumQueries(4):
-            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data,
-                                                         status_code=status.HTTP_200_OK)
-        self.assertEqual(json_response['name'], data['name'])
-        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
-
-    def test_create_passenger(self):
-        self.scene_obj.passenger.delete()
-
-        data = dict(name='new name', va=2, pv=2, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
-        with self.assertNumQueries(6):
-            json_response = self.scenes_passenger_action(self.client, self.scene_obj.public_id, data)
-
-        self.assertDictEqual(json_response, PassengerSerializer(Passenger.objects.first()).data)
+        with self.assertNumQueries(9):
+            json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
+                                                       status_code=status.HTTP_200_OK)
+        self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
+        self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
 
     def test_get_global_result(self):
         transport_network_obj = TransportNetwork.objects.first()
@@ -605,13 +592,13 @@ class SceneAPITest(BaseTestCase):
             OptimizationResultPerMode.objects.create(optimization=optimization_obj, transport_mode=transport_mode_obj,
                                                      b=i, k=i, l=i)
 
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(8):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
         self.assertListEqual(json_response, [TransportNetworkOptimizationSerializer(optimization_obj).data])
 
     def test_get_global_result_without_optimization_data(self):
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(5):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
         self.assertListEqual(json_response, [])

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
 
-from api.serializers import CitySerializer, SceneSerializer, PassengerSerializer, TransportModeSerializer, \
+from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
@@ -115,7 +115,8 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
     """
     serializer_class = SceneSerializer
     lookup_field = 'public_id'
-    queryset = Scene.objects.select_related('passenger', 'city').prefetch_related('transportmode_set')
+    queryset = Scene.objects.select_related('passenger', 'city').prefetch_related('transportmode_set',
+                                                                                  'transportnetwork_set__route_set')
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):
