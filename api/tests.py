@@ -841,6 +841,19 @@ class ValidationAPITest(BaseTestCase):
         url = reverse('validate-route')
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
+    def validate_transport_mode(self, client, data, status_code=status.HTTP_200_OK):
+        url = reverse('validate-transport-mode')
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
     def test_validate_route(self):
         json_response = self.validate_route(self.client, dict())
         print(json_response)
+
+    def test_validate_transport_mode_without_data(self):
+        json_response = self.validate_transport_mode(self.client, dict(), status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', json_response.keys())
+
+    def test_validate_transport_mode_with_wrong_data(self):
+        data = dict(name='tm', b_a=-10000, co=-1, c1=-1, c2=-1, v=-1, t=-1, f_max=1, k_max=1, theta=1, tat=1, d=1, f_ini=1)
+        json_response = self.validate_transport_mode(self.client, data, status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', json_response.keys())

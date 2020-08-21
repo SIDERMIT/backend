@@ -8,6 +8,7 @@ from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
+from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
@@ -259,6 +260,25 @@ def validate_matrix_parameters(request):
 
 @api_view()
 def validate_transport_mode(request):
+    try:
+        name = request.query_params.get('name')
+        b_a = int(request.query_params.get('b_a'))
+        co = float(request.query_params.get('co'))
+        c1 = float(request.query_params.get('c1'))
+        c2 = float(request.query_params.get('c2'))
+        v = float(request.query_params.get('v'))
+        t = float(request.query_params.get('t'))
+        f_max = float(request.query_params.get('f_max'))
+        k_max = float(request.query_params.get('k_max'))
+        theta = float(request.query_params.get('theta'))
+        tat = float(request.query_params.get('tat'))
+        d = int(request.query_params.get('d'))
+        f_ini = float(request.query_params.get('f_ini'))
+
+        SIDERMITTransportMode(name, b_a, co, c1, c2, v, t, f_max, k_max, theta, tat, d, f_ini)
+    except (SIDERMITException, TypeError) as e:
+        raise ParseError(e)
+
     return Response({})
 
 
