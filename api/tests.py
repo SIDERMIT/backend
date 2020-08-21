@@ -64,9 +64,9 @@ class BaseTestCase(TestCase):
 
                 transport_mode_obj_list = []
                 for k in range(transport_mode_number):
-                    transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), b_a=1,
-                                                                      co=1, c1=1, c2=1, v=1, t=1, f_max=1, k_max=1,
-                                                                      theta=1, tat=1, d=1, f_ini=1, scene=scene_obj)
+                    transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), bya=1,
+                                                                      co=1, c1=1, c2=1, v=1, t=1, fmax=1, kmax=1,
+                                                                      theta=1, tat=1, d=1, fini=1, scene=scene_obj)
                     transport_mode_obj_list.append(transport_mode_obj)
 
                 for p in range(transport_network_number):
@@ -196,13 +196,6 @@ class BaseTestCase(TestCase):
         url = reverse('transport-modes-detail', kwargs=dict(scene_public_id=scene_public_id, public_id=public_id))
 
         return self._make_request(client, self.PUT_REQUEST, url, data, status_code, format='json')
-
-    def scenes_transportmode_partial_update(self, client, scene_public_id, public_id, fields,
-                                            status_code=status.HTTP_200_OK):
-        url = reverse('transport-modes-detail', kwargs=dict(scene_public_id=scene_public_id, public_id=public_id))
-        data = fields
-
-        return self._make_request(client, self.PATCH_REQUEST, url, data, status_code, format='json')
 
     def scenes_transportmode_delete(self, client, scene_public_id, public_id, status_code=status.HTTP_204_NO_CONTENT):
         url = reverse('transport-modes-detail', kwargs=dict(scene_public_id=scene_public_id, public_id=public_id))
@@ -606,7 +599,7 @@ class SceneAPITest(BaseTestCase):
     def test_create_transport_mode(self):
         self.scene_obj.transportmode_set.all().delete()
 
-        data = dict(name='new name', b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2, f_ini=2)
+        data = dict(name='new name', bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2, theta=1, tat=2, d=2, fini=2)
         with self.assertNumQueries(2):
             json_response = self.scenes_transportmode_create(self.client, self.scene_obj.public_id, data)
 
@@ -615,7 +608,7 @@ class SceneAPITest(BaseTestCase):
     def test_create_transport_mode_but_scene_does_not_exist(self):
         self.scene_obj.transportmode_set.all().delete()
 
-        data = dict(name='new name', f_ini=1, b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2, theta=2, tat=2, d=2)
+        data = dict(name='new name', fini=1, bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2, theta=1, tat=2, d=2)
         with self.assertNumQueries(1):
             json_response = self.scenes_transportmode_create(self.client, uuid.uuid4(), data,
                                                              status_code=status.HTTP_400_BAD_REQUEST)
@@ -634,8 +627,8 @@ class SceneAPITest(BaseTestCase):
 
     def test_update_transport_mode(self):
         public_id = self.scene_obj.transportmode_set.all()[0].public_id
-        data = dict(name='new name', public_id=str(public_id), b_a=2, co=2, c1=2, c2=2, v=2, t=2, f_max=2, k_max=2,
-                    theta=2, tat=2, d=2, f_ini=2)
+        data = dict(name='new name', public_id=str(public_id), bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2,
+                    theta=1, tat=2, d=2, fini=2)
 
         with self.assertNumQueries(2):
             json_response = self.scenes_transportmode_update(self.client, self.scene_obj.public_id, public_id, data)
@@ -644,18 +637,7 @@ class SceneAPITest(BaseTestCase):
         self.assertDictEqual(json_response,
                              TransportModeSerializer(TransportMode.objects.get(public_id=public_id)).data)
 
-    def test_partial_update_transport_mode(self):
-        public_id = self.scene_obj.transportmode_set.all()[0].public_id
-        data = dict(name='new name', public_id=public_id)
-
-        with self.assertNumQueries(2):
-            json_response = self.scenes_transportmode_partial_update(self.client, self.scene_obj.public_id, public_id,
-                                                                     data)
-        self.assertEqual(json_response['name'], data['name'])
-        self.assertDictEqual(json_response,
-                             TransportModeSerializer(TransportMode.objects.get(public_id=public_id)).data)
-
-    def test_partial_delete_transport_mode(self):
+    def test_delete_transport_mode(self):
         public_id = self.scene_obj.transportmode_set.all()[0].public_id
 
         with self.assertNumQueries(4):
@@ -851,9 +833,10 @@ class ValidationAPITest(BaseTestCase):
 
     def test_validate_transport_mode_without_data(self):
         json_response = self.validate_transport_mode(self.client, dict(), status_code=status.HTTP_400_BAD_REQUEST)
-        self.assertIn('detail', json_response.keys())
+        for key in ['name', 'bya', 'co', 'c1', 'c2', 'v', 't', 'fmax', 'kmax', 'theta', 'tat', 'd', 'fini']:
+            self.assertIn(json_response[key][0], 'This field is required.')
 
     def test_validate_transport_mode_with_wrong_data(self):
-        data = dict(name='tm', b_a=-10000, co=-1, c1=-1, c2=-1, v=-1, t=-1, f_max=1, k_max=1, theta=1, tat=1, d=1, f_ini=1)
+        data = dict(name='tm', bya=-10000, co=-1, c1=-1, c2=-1, v=-1, t=-1, fmax=1, kmax=1, theta=1, tat=1, d=1, fini=1)
         json_response = self.validate_transport_mode(self.client, data, status_code=status.HTTP_400_BAD_REQUEST)
-        self.assertIn('detail', json_response.keys())
+        self.assertIn(json_response['non_field_errors'][0], 'You must give a valid value for bya')

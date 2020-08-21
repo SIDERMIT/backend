@@ -3,6 +3,7 @@ import logging
 from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
+from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
@@ -19,6 +20,14 @@ class PassengerSerializer(serializers.ModelSerializer):
 
 class TransportModeSerializer(serializers.ModelSerializer):
 
+    def validate(self, attrs):
+        try:
+            SIDERMITTransportMode(**attrs)
+        except (SIDERMITException, TypeError) as e:
+            raise serializers.ValidationError(e)
+
+        return attrs
+
     def create(self, validated_data):
         try:
             scene_obj = Scene.objects.get(public_id=self.context['view'].kwargs['scene_public_id'])
@@ -32,8 +41,8 @@ class TransportModeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransportMode
         fields = (
-            'name', 'created_at', 'public_id', 'b_a', 'co', 'c1', 'c2', 'v', 't', 'f_max', 'k_max', 'theta', 'tat', 'd',
-            'f_ini')
+            'name', 'created_at', 'public_id', 'bya', 'co', 'c1', 'c2', 'v', 't', 'fmax', 'kmax', 'theta', 'tat', 'd',
+            'fini')
         read_only_fields = ['created_at', 'public_id']
 
 
