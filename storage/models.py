@@ -51,15 +51,15 @@ class TransportMode(models.Model):
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     public_id = models.UUIDField(default=uuid.uuid4)
     # transport mode variables
-    b_a = models.IntegerField()  # b&a
+    bya = models.IntegerField()  # b&a
     co = models.FloatField()
     c1 = models.FloatField()
     c2 = models.FloatField()
     v = models.FloatField()
     t = models.FloatField()
-    f_ini = models.FloatField()
-    f_max = models.FloatField()
-    k_max = models.FloatField()
+    fini = models.FloatField()
+    fmax = models.FloatField()
+    kmax = models.FloatField()
     theta = models.FloatField()
     tat = models.FloatField()
     d = models.FloatField()
