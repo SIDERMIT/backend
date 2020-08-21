@@ -230,16 +230,6 @@ class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
     lookup_field = 'public_id'
     queryset = Route.objects.prefetch_related('transport_mode')
 
-    def create(self, request, *args, **kwargs):
-        parent_key = 'transport_network_public_id'
-        request.data[parent_key] = kwargs[parent_key]
-        return super().create(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        parent_key = 'transport_network_public_id'
-        request.data[parent_key] = kwargs[parent_key]
-        return super().update(request, *args, **kwargs)
-
 
 @api_view()
 def recent_optimizations(request):

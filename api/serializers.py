@@ -40,7 +40,6 @@ class TransportModeSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     transport_mode = TransportModeSerializer(many=False, read_only=True)
     transport_mode_public_id = serializers.UUIDField(write_only=True)
-    transport_network_public_id = serializers.UUIDField(write_only=True)
 
     def validate_transport_mode_public_id(self, value):
         try:
@@ -50,17 +49,14 @@ class RouteSerializer(serializers.ModelSerializer):
 
         return transport_mode_obj
 
-    def validate_transport_network_public_id(self, value):
+    def create(self, validated_data):
         try:
-            transport_network_obj = TransportNetwork.objects.get(public_id=value)
+            transport_network_obj = TransportNetwork.objects. \
+                get(public_id=self.context['view'].kwargs['transport_network_public_id'])
         except TransportNetwork.DoesNotExist:
             raise serializers.ValidationError('Transport network does not exist')
 
-        return transport_network_obj
-
-    def create(self, validated_data):
         transport_mode_obj = validated_data.pop('transport_mode_public_id')
-        transport_network_obj = validated_data.pop('transport_network_public_id')
         route_obj = Route.objects.create(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
                                          **validated_data)
 
@@ -70,7 +66,7 @@ class RouteSerializer(serializers.ModelSerializer):
         model = Route
         fields = (
             'created_at', 'public_id', 'name', 'node_sequence_i', 'stop_sequence_i', 'node_sequence_r',
-            'stop_sequence_r', 'transport_mode_public_id', 'transport_network_public_id', 'transport_mode')
+            'stop_sequence_r', 'transport_mode_public_id', 'transport_mode')
         read_only_fields = ['created_at', 'public_id']
 
 

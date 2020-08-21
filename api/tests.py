@@ -750,12 +750,12 @@ class TransportNetworkAPITest(BaseTestCase):
                                                                 status_code=status.HTTP_400_BAD_REQUEST)
 
         self.assertEqual(Route.objects.count(), 1)
-        self.assertIn('Transport network does not exist', json_response['transport_network_public_id'][0])
+        self.assertIn('Transport network does not exist', json_response[0])
 
     def test_create_route_but_transport_mode_does_not_exist(self):
         data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
                     stop_sequence_r='6,5,4', transport_mode_public_id=uuid.uuid4())
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(1):
             json_response = self.transport_network_route_create(self.client, self.transport_network_obj.public_id, data,
                                                                 status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -769,7 +769,7 @@ class TransportNetworkAPITest(BaseTestCase):
                     node_sequence_r='3,2,1', stop_sequence_r='e,1',
                     transport_mode_public_id=str(transport_mode_obj.public_id))
 
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(4):
             json_response = self.transport_network_route_update(self.client, self.transport_network_obj.public_id,
                                                                 public_id, data, status_code=status.HTTP_200_OK)
 
@@ -786,7 +786,7 @@ class TransportNetworkAPITest(BaseTestCase):
         public_id = self.transport_network_obj.route_set.all()[0].public_id
         data = dict(name='new name', public_id=public_id)
 
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(3):
             json_response = self.transport_network_route_partial_update(self.client,
                                                                         self.transport_network_obj.public_id,
                                                                         public_id, data, status_code=status.HTTP_200_OK)
