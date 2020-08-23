@@ -28,16 +28,6 @@ class TransportModeSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
-        try:
-            scene_obj = Scene.objects.get(public_id=self.context['view'].kwargs['scene_public_id'])
-        except Scene.DoesNotExist:
-            raise serializers.ValidationError('Scene does not exist')
-
-        transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **validated_data)
-
-        return transport_mode_obj
-
     class Meta:
         model = TransportMode
         fields = (
@@ -144,7 +134,7 @@ class ShortCitySerializer(BaseCitySerializer):
 
 class SceneSerializer(serializers.ModelSerializer):
     passenger = PassengerSerializer()
-    transportmode_set = TransportModeSerializer(many=True, read_only=True)
+    transportmode_set = TransportModeSerializer(many=True)
     city_public_id = serializers.UUIDField(write_only=True)
     transportnetwork_set = TransportNetworkSerializer(many=True, read_only=True)
     city = ShortCitySerializer(read_only=True)
@@ -164,17 +154,34 @@ class SceneSerializer(serializers.ModelSerializer):
 
         return city_obj
 
+    def validate_transportmode_set(self, value):
+        if len(value) == 0:
+            raise serializers.ValidationError('You have to add at least one transport mode')
+
+        return value
+
     def create(self, validated_data):
         city_obj = validated_data.pop('city_public_id')
+        transport_mode_set = validated_data.pop('transportmode_set')
         passenger_data = validated_data.pop('passenger')
         scene_obj = Scene.objects.create(city=city_obj, **validated_data)
         Passenger.objects.create(scene=scene_obj, **passenger_data)
+        transport_mode_list = []
+        for transport_mode_data in transport_mode_set:
+            TransportMode(**transport_mode_data)
+        TransportMode.objects.bulk_create(transport_mode_list)
 
         return scene_obj
 
     def update(self, instance, validated_data):
         # we do not update passenger data
         passenger_data = validated_data.pop('passenger')
+        # update are made directly on transportmode api, so this field is not needed
+        try:
+            validated_data.pop('transportmode_set')
+        except KeyError:
+            pass
+
         scene_obj = super().update(instance, validated_data)
 
         passenger_serializer = PassengerSerializer(scene_obj.passenger, data=passenger_data, partial=True)
