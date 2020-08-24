@@ -493,11 +493,12 @@ class SceneAPITest(BaseTestCase):
                                    fini=1)
         fields = dict(name='scene name', city_public_id=self.city_obj.public_id, passenger=passenger_data,
                       transportmode_set=[transport_mode_data])
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             self.scenes_create(self.client, fields)
 
         self.assertEqual(Scene.objects.count(), 2)
         self.assertEqual(City.objects.count(), 1)
+        self.assertEqual(TransportMode.objects.count(), 3)
 
     def test_create_scene_with_wrong_city_id(self):
         wrong_city_id_list = ['not_uuid_value', str(uuid.uuid4())]

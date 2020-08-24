@@ -168,7 +168,7 @@ class SceneSerializer(serializers.ModelSerializer):
         Passenger.objects.create(scene=scene_obj, **passenger_data)
         transport_mode_list = []
         for transport_mode_data in transport_mode_set:
-            TransportMode(**transport_mode_data)
+            transport_mode_list.append(TransportMode(scene=scene_obj, **transport_mode_data))
         TransportMode.objects.bulk_create(transport_mode_list)
 
         return scene_obj
