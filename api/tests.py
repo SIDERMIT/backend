@@ -449,16 +449,16 @@ class CityAPITest(BaseTestCase):
                     {"name": "SC_2", "id": "4", "x": 0.9270509831248424, "y": 2.8531695488854605, "type": "subcenter"}
                 ],
                 "edges": [
-                    {"id": 1, "source": "1", "target": "2"},
-                    {"id": 2, "source": "2", "target": "1"},
-                    {"id": 3, "source": "2", "target": "0"},
-                    {"id": 4, "source": "0", "target": "2"},
-                    {"id": 5, "source": "2", "target": "4"},
-                    {"id": 6, "source": "4", "target": "2"},
-                    {"id": 7, "source": "3", "target": "4"},
-                    {"id": 8, "source": "4", "target": "3"},
-                    {"id": 9, "source": "4", "target": "0"},
-                    {"id": 10, "source": "0", "target": "4"}
+                    {"id": 1, "source": 1, "target": 2},
+                    {"id": 2, "source": 2, "target": 1},
+                    {"id": 3, "source": 2, "target": 0},
+                    {"id": 4, "source": 0, "target": 2},
+                    {"id": 5, "source": 2, "target": 4},
+                    {"id": 6, "source": 4, "target": 2},
+                    {"id": 7, "source": 3, "target": 4},
+                    {"id": 8, "source": 4, "target": 3},
+                    {"id": 9, "source": 4, "target": 0},
+                    {"id": 10, "source": 0, "target": 4}
                 ]}
         }
         self.assertDictEqual(expected_answer, json_response)
