@@ -58,7 +58,7 @@ class CityViewSet(viewsets.ModelViewSet):
         return Response(CitySerializer(new_city_obj).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['GET'])
-    def build_graph_file(self, request):
+    def build_graph_file_from_parameters(self, request):
         try:
             n = int(request.query_params.get('n'))
             l = float(request.query_params.get('l'))
@@ -74,6 +74,18 @@ class CityViewSet(viewsets.ModelViewSet):
             raise ParseError('Parameter can not be empty')
 
         return Response({'pajek': content, 'network': network}, status.HTTP_200_OK)
+
+    @action(detail=False, methods=['GET'])
+    def network_data_from_pajek_file(self, request):
+        try:
+            graph_content = request.query_params.get('graph')
+
+            graph_obj = Graph.build_from_content(graph_content, GraphContentFormat.PAJEK)
+            network = get_network_descriptor(graph_obj)
+        except (ValueError, SIDERMITException) as e:
+            raise ParseError(e)
+
+        return Response({'network': network}, status.HTTP_200_OK)
 
     @action(detail=True, methods=['GET'])
     def build_matrix_file(self, request, public_id=None):

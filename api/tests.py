@@ -126,8 +126,13 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
-    def cities_build_graph_file_action(self, client, data, status_code=status.HTTP_200_OK):
-        url = reverse('cities-build-graph-file')
+    def cities_build_graph_file_from_parameters_action(self, client, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-build-graph-file-from-parameters')
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def cities_network_data_from_pajek_file_action(self, client, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-network-data-from-pajek-file')
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
@@ -390,7 +395,7 @@ class CityAPITest(BaseTestCase):
     def test_build_graph_file_city(self):
         data = dict(n=1, l=1.0, p=1.0, g=1.0)
         with self.assertNumQueries(0):
-            json_response = self.cities_build_graph_file_action(self.client, data)
+            json_response = self.cities_build_graph_file_from_parameters_action(self.client, data)
 
         expected_content_file = '*vertices 3\n0 CBD 0 0 CBD 0 1.0\n1 P_1 2.0 0.0 P 1 1.0\n2 SC_1 1.0 0.0 SC 1 1.0\n'
         excepted_network_data = {
@@ -407,23 +412,76 @@ class CityAPITest(BaseTestCase):
             new_data = data.copy()
             new_data[key] = 'asdasd'
             with self.assertNumQueries(0):
-                json_response = self.cities_build_graph_file_action(self.client, new_data,
-                                                                    status_code=status.HTTP_400_BAD_REQUEST)
+                json_response = self.cities_build_graph_file_from_parameters_action(
+                    self.client, new_data, status_code=status.HTTP_400_BAD_REQUEST)
             if index == 0:
                 self.assertIn('invalid literal', json_response['detail'])
             else:
                 self.assertIn('could not convert string to float', json_response['detail'])
 
         data['n'] = -1
-        json_response = self.cities_build_graph_file_action(self.client, data,
-                                                            status_code=status.HTTP_400_BAD_REQUEST)
+        json_response = self.cities_build_graph_file_from_parameters_action(self.client, data,
+                                                                            status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('n cannot be a negative number', json_response['detail'])
 
     def test_build_graph_file_without_parameters_city(self):
         with self.assertNumQueries(0):
-            json_response = self.cities_build_graph_file_action(self.client, dict(),
-                                                                status_code=status.HTTP_400_BAD_REQUEST)
+            json_response = self.cities_build_graph_file_from_parameters_action(self.client, dict(),
+                                                                                status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('Parameter can not be empty', json_response['detail'])
+
+    def test_get_network_data_from_pajek_file(self):
+        data = dict(graph='*vertices 11\n'
+                          '0 CBD 0 0 CBD 0 1.0\n'
+                          '1 P_1 3.6 0.0 P 1 1.0\n'
+                          '2 SC_1 3.0 0.0 SC 1 1.0\n'
+                          '3 P_2 1.112461179749811 3.4238034586625528 P 2 1.0\n'
+                          '4 SC_2 0.9270509831248424 2.8531695488854605 SC 2 1.0')
+        with self.assertNumQueries(0):
+            json_response = self.cities_network_data_from_pajek_file_action(self.client, data)
+        expected_answer = {
+            "network": {
+                "nodes": [
+                    {"name": "CBD", "id": "0", "x": 0.0, "y": 0.0, "type": "cbd"},
+                    {"name": "P_1", "id": "1", "x": 3.6, "y": 0.0, "type": "periphery"},
+                    {"name": "SC_1", "id": "2", "x": 3.0, "y": 0.0, "type": "subcenter"},
+                    {"name": "P_2", "id": "3", "x": 1.112461179749811, "y": 3.4238034586625528, "type": "periphery"},
+                    {"name": "SC_2", "id": "4", "x": 0.9270509831248424, "y": 2.8531695488854605, "type": "subcenter"}
+                ],
+                "edges": [
+                    {"id": 1, "source": "1", "target": "2"},
+                    {"id": 2, "source": "2", "target": "1"},
+                    {"id": 3, "source": "2", "target": "0"},
+                    {"id": 4, "source": "0", "target": "2"},
+                    {"id": 5, "source": "2", "target": "4"},
+                    {"id": 6, "source": "4", "target": "2"},
+                    {"id": 7, "source": "3", "target": "4"},
+                    {"id": 8, "source": "4", "target": "3"},
+                    {"id": 9, "source": "4", "target": "0"},
+                    {"id": 10, "source": "0", "target": "4"}
+                ]}
+        }
+        self.assertDictEqual(expected_answer, json_response)
+
+    def test_get_network_data_from_pajek_file_with_wrong_content(self):
+        data = dict(graph='*vertices 11\n'
+                          '0 CBD 0 0 CBD 0 1.0\n'
+                          '1 P_1 3.6 0.0 P 1 1.0\n'
+                          '2 SC_1 3.0 0.0 SC 1 1.0\n'
+                          '3 P_2 1.112461179749811 3.4238034586625528 P 2 1.0\n'
+                          '4 SC_2 0.9270509831248424 2.8531695488854605 SC 2 asd')
+        with self.assertNumQueries(0):
+            json_response = self.cities_network_data_from_pajek_file_action(self.client, data,
+                                                                            status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn("could not convert string to float: 'asd'", json_response['detail'])
+
+    def test_get_network_data_from_pajek_file_without_content(self):
+        data = dict(graph='')
+        with self.assertNumQueries(0):
+            json_response = self.cities_network_data_from_pajek_file_action(self.client, data,
+                                                                            status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('The number of lines in the file must be 2n+1 or file is very big (until 5000 zones accepted)',
+                      json_response['detail'])
 
     def test_build_matrix_file_city(self):
         data = dict(y=1, a=1.0, alpha=0.1, beta=0.8)
