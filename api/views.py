@@ -107,7 +107,7 @@ class CityViewSet(viewsets.ModelViewSet):
             for i in range(size):
                 row = []
                 for j in range(size):
-                    row.append(demand_matrix[str(i)][str(j)])
+                    row.append(demand_matrix[i][j])
                 demand_matrix_data.append(row)
 
             demand_matrix_header = [node_obj.name for node_obj in graph_obj.get_nodes()]
