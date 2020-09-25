@@ -666,8 +666,7 @@ class SceneAPITest(BaseTestCase):
         self.assertListEqual(json_response, [])
 
     def test_create_transport_mode(self):
-        data = dict(name='new name', bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2,
-                    theta=1, tat=2, d=2, fini=2)
+        data = dict(name='new name', bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2, theta=1, tat=2, d=2, fini=2)
 
         self.assertEqual(TransportMode.objects.count(), 2)
         with self.assertNumQueries(2):
