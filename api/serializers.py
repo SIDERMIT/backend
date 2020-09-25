@@ -28,6 +28,16 @@ class TransportModeSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def create(self, validated_data):
+        try:
+            scene_obj = Scene.objects.get(public_id=self.context['view'].kwargs['scene_public_id'])
+        except Scene.DoesNotExist:
+            raise serializers.ValidationError('Scene does not exist')
+
+        transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **validated_data)
+
+        return transport_mode_obj
+
     class Meta:
         model = TransportMode
         fields = (

@@ -186,6 +186,11 @@ class BaseTestCase(TestCase):
 
     # transport mode helpers
 
+    def scenes_transportmode_create(self, client, scene_public_id, data, status_code=status.HTTP_201_CREATED):
+        url = reverse('transport-modes-list', kwargs=dict(scene_public_id=scene_public_id))
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
     def scenes_transportmode_retrieve(self, client, scene_public_id, public_id, status_code=status.HTTP_200_OK):
         url = reverse('transport-modes-detail', kwargs=dict(scene_public_id=scene_public_id, public_id=public_id))
         data = dict()
@@ -659,6 +664,18 @@ class SceneAPITest(BaseTestCase):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
         self.assertListEqual(json_response, [])
+
+    def test_create_transport_mode(self):
+        data = dict(name='new name', bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2,
+                    theta=1, tat=2, d=2, fini=2)
+
+        self.assertEqual(TransportMode.objects.count(), 2)
+        with self.assertNumQueries(2):
+            json_response = self.scenes_transportmode_create(self.client, self.scene_obj.public_id, data)
+
+        self.assertEqual(TransportMode.objects.count(), 3)
+        transport_mode_obj = TransportMode.objects.order_by('-created_at').first()
+        self.assertDictEqual(json_response, TransportModeSerializer(transport_mode_obj).data)
 
     def test_retrieve_transport_mode(self):
         transport_mode_obj = self.scene_obj.transportmode_set.all()[0]

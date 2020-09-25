@@ -182,7 +182,7 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
 
 class TransportModeViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
-                           viewsets.GenericViewSet):
+                           mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
     API endpoint to work with transport modes
     """
