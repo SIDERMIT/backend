@@ -8,6 +8,7 @@ from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
+from sidermit.publictransportsystem import TransportNetwork as SidermitTransportNetwork
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
@@ -222,15 +223,59 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         return Response(TransportNetworkSerializer(new_transport_network_obj).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['POST'])
-    def create_default_routes(self, request, public_id=None):
+    def create_default_routes(self, request):
         """ create defaults routes """
-        transport_network_obj = self.get_object()
+        default_routes = request.data.get('default_routes', [])
+        scene_public_id = request.data.get('scene_public_id')
 
-        # TODO: use sidermit library to create route in database and after that return list of objects
-        # Route.objects.create()
-        rows = []
+        scene_obj = Scene.objects.select_related('city').get(public_id=scene_public_id)
 
-        return Response(rows, status.HTTP_200_OK)
+        graph_obj = scene_obj.city.get_sidermit_graph()
+        network_obj = SidermitTransportNetwork(graph_obj)
+
+        transport_mode_dict = dict()
+
+        route_tuple = []
+        for default_route in default_routes:
+            transport_mode_public_id = default_route['transportMode']
+            if transport_mode_public_id not in transport_mode_dict:
+                transport_mode_obj = TransportMode.objects.get(public_id=transport_mode_public_id)
+                transport_mode_dict[transport_mode_public_id] = transport_mode_obj.get_sidermit_transport_mode()
+
+            if default_route['type'] == 'Feeder':
+                route_tuple.append((network_obj.get_feeder_routes(transport_mode_dict[transport_mode_public_id]),
+                                    transport_mode_public_id))
+            elif default_route['type'] == 'Circular':
+                route_tuple.append((network_obj.get_circular_routes(transport_mode_dict[transport_mode_public_id]),
+                                    transport_mode_public_id))
+            elif default_route['type'] == 'Radial':
+                route_tuple.append((network_obj.get_radial_routes(transport_mode_dict[transport_mode_public_id],
+                                                                  short=default_route['extension'],
+                                                                  express=default_route['odExclusive']),
+                                    transport_mode_public_id))
+            elif default_route['type'] == 'Diametral':
+                route_tuple.append((network_obj.get_diametral_routes(transport_mode_dict[transport_mode_public_id],
+                                                                     jump=default_route['zoneJumps'],
+                                                                     short=default_route['extension'],
+                                                                     express=default_route['odExclusive']),
+                                    transport_mode_public_id))
+            elif default_route['type'] == 'Tangential':
+                route_tuple.append((network_obj.get_tangencial_routes(transport_mode_dict[transport_mode_public_id],
+                                                                      jump=default_route['zoneJumps'],
+                                                                      short=default_route['extension'],
+                                                                      express=default_route['odExclusive']),
+                                    transport_mode_public_id))
+
+            new_routes = []
+            for (routes, transport_mode_public_id) in route_tuple:
+                for route in routes:
+                    new_routes.append(
+                        dict(route_id=route.id, transport_mode_public_id=transport_mode_public_id,
+                             nodes_sequence_i=route.nodes_sequence_i, nodes_sequence_r=route.nodes_sequence_r,
+                             stops_sequence_i=route.stops_sequence_i, stops_sequence_r=route.stops_sequence_r,
+                             type=route._type.value))
+
+        return Response(new_routes, status.HTTP_200_OK)
 
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,

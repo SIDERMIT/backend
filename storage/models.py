@@ -3,6 +3,9 @@ import uuid
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
+from sidermit.city import Graph, GraphContentFormat
+from sidermit.publictransportsystem import Passenger as SidermitPassenger, TransportMode as SidermitTransportMode, \
+    TransportNetwork as SidermitTransportNetwork, Route as SidermitRoute
 
 
 class City(models.Model):
@@ -22,6 +25,9 @@ class City(models.Model):
     a = models.FloatField(null=True)
     alpha = models.FloatField(null=True)
     beta = models.FloatField(null=True)
+
+    def get_sidermit_graph(self):
+        return Graph.build_from_content(self.graph, GraphContentFormat.PAJEK)
 
 
 class Scene(models.Model):
@@ -44,6 +50,9 @@ class Passenger(models.Model):
     spa = models.FloatField()
     spt = models.FloatField()
 
+    def get_sidermit_passenger(self):
+        return SidermitPassenger(self.va, self.pv, self.pw, self.pa, self.pt, self.spv, self.spw, self.spa, self.spt)
+
 
 class TransportMode(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
@@ -64,12 +73,19 @@ class TransportMode(models.Model):
     tat = models.FloatField()
     d = models.FloatField()
 
+    def get_sidermit_transport_mode(self):
+        return SidermitTransportMode(self.name, self.bya, self.co, self.c1, self.c2, self.v, self.t, self.fmax,
+                                     self.kmax, self.theta, self.tat, self.d, self.fini)
+
 
 class TransportNetwork(models.Model):
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     public_id = models.UUIDField(default=uuid.uuid4)
+
+    def get_sidermit_network(self, city_graph):
+        return SidermitTransportNetwork(city_graph)
 
 
 class Route(models.Model):
@@ -82,6 +98,10 @@ class Route(models.Model):
     stop_sequence_i = models.CharField(max_length=50)
     node_sequence_r = models.CharField(max_length=50, null=True)
     stop_sequence_r = models.CharField(max_length=50, null=True)
+
+    def get_sidermit_route(self, transport_mode_obj, route_type):
+        return SidermitRoute(self.name, transport_mode_obj, self.node_sequence_i, self.node_sequence_r,
+                             self.stop_sequence_i, self.stop_sequence_r, route_type)
 
 
 class Optimization(models.Model):

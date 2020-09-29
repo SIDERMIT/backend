@@ -246,6 +246,13 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
+    def transport_network_create_default_routes_action(self, client, scene_public_id, default_routes,
+                                                       status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-create-default-routes')
+        data = dict(scene_public_id=scene_public_id, default_routes=default_routes)
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
     # route helpers
 
     def transport_network_route_create(self, client, transport_network_public_id, data,
@@ -774,6 +781,77 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertEqual(TransportNetwork.objects.count(), 2)
         self.assertDictEqual(json_response,
                              TransportNetworkSerializer(TransportNetwork.objects.order_by('-created_at').first()).data)
+
+    def test_create_default_route(self):
+        transport_mode_public_id = str(TransportMode.objects.filter(scene=self.scene_obj).first().public_id)
+        route_type_list = ['Circular', 'Diametral', 'Feeder', 'Radial', 'Tangential']
+        expected_results = [
+            [{'route_id': 'CIR_I_tm-0-0-0', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [2, 4, 6, 8, 2], 'nodes_sequence_r': [], 'stops_sequence_i': [2, 4, 6, 8, 2],
+              'stops_sequence_r': [], 'type': 3},
+             {'route_id': 'CIR_R_tm-0-0-0', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [], 'nodes_sequence_r': [8, 6, 4, 2, 8], 'stops_sequence_i': [],
+              'stops_sequence_r': [8, 6, 4, 2, 8], 'type': 3}],
+            [{'route_id': 'DSE1_tm-0-0-0_1', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [2, 0, 4], 'nodes_sequence_r': [4, 0, 2], 'stops_sequence_i': [2, 4],
+              'stops_sequence_r': [4, 2], 'type': 2},
+             {'route_id': 'DSE1_tm-0-0-0_2', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [4, 0, 6], 'nodes_sequence_r': [6, 0, 4], 'stops_sequence_i': [4, 6],
+              'stops_sequence_r': [6, 4], 'type': 2},
+             {'route_id': 'DSE1_tm-0-0-0_3', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [6, 0, 8], 'nodes_sequence_r': [8, 0, 6], 'stops_sequence_i': [6, 8],
+              'stops_sequence_r': [8, 6], 'type': 2},
+             {'route_id': 'DSE1_tm-0-0-0_4', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [8, 0, 2], 'nodes_sequence_r': [2, 0, 8], 'stops_sequence_i': [8, 2],
+              'stops_sequence_r': [2, 8], 'type': 2}],
+            [{'route_id': 'F_tm-0-0-0_1', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [1, 2], 'nodes_sequence_r': [2, 1], 'stops_sequence_i': [1, 2],
+              'stops_sequence_r': [2, 1], 'type': 2},
+             {'route_id': 'F_tm-0-0-0_2', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [3, 4], 'nodes_sequence_r': [4, 3], 'stops_sequence_i': [3, 4],
+              'stops_sequence_r': [4, 3], 'type': 2},
+             {'route_id': 'F_tm-0-0-0_3', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [5, 6], 'nodes_sequence_r': [6, 5], 'stops_sequence_i': [5, 6],
+              'stops_sequence_r': [6, 5], 'type': 2},
+             {'route_id': 'F_tm-0-0-0_4', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [7, 8], 'nodes_sequence_r': [8, 7], 'stops_sequence_i': [7, 8],
+              'stops_sequence_r': [8, 7], 'type': 2}],
+            [{'route_id': 'RS_tm-0-0-0_1', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [2, 0], 'nodes_sequence_r': [0, 2], 'stops_sequence_i': [2, 0],
+              'stops_sequence_r': [0, 2], 'type': 2},
+             {'route_id': 'RS_tm-0-0-0_2', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [4, 0], 'nodes_sequence_r': [0, 4], 'stops_sequence_i': [4, 0],
+              'stops_sequence_r': [0, 4], 'type': 2},
+             {'route_id': 'RS_tm-0-0-0_3', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [6, 0], 'nodes_sequence_r': [0, 6], 'stops_sequence_i': [6, 0],
+              'stops_sequence_r': [0, 6], 'type': 2},
+             {'route_id': 'RS_tm-0-0-0_4', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [8, 0], 'nodes_sequence_r': [0, 8], 'stops_sequence_i': [8, 0],
+              'stops_sequence_r': [0, 8], 'type': 2}],
+            [{'route_id': 'TSE1_tm-0-0-0_1', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [2, 4], 'nodes_sequence_r': [4, 2], 'stops_sequence_i': [2, 4],
+              'stops_sequence_r': [4, 2], 'type': 2},
+             {'route_id': 'TSE1_tm-0-0-0_2', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [4, 6], 'nodes_sequence_r': [6, 4], 'stops_sequence_i': [4, 6],
+              'stops_sequence_r': [6, 4], 'type': 2},
+             {'route_id': 'TSE1_tm-0-0-0_3', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [6, 8], 'nodes_sequence_r': [8, 6], 'stops_sequence_i': [6, 8],
+              'stops_sequence_r': [8, 6], 'type': 2},
+             {'route_id': 'TSE1_tm-0-0-0_4', 'transport_mode_public_id': transport_mode_public_id,
+              'nodes_sequence_i': [8, 2], 'nodes_sequence_r': [2, 8], 'stops_sequence_i': [8, 2],
+              'stops_sequence_r': [2, 8], 'type': 2}]
+        ]
+
+        for route_type, expected_result in zip(route_type_list, expected_results):
+            default_routes = [
+                dict(transportMode=str(transport_mode_public_id), type=route_type, zoneJumps=1, extension=True,
+                     odExclusive=True)
+            ]
+
+            with self.assertNumQueries(2):
+                json_response = self.transport_network_create_default_routes_action(
+                    self.client, str(self.scene_obj.public_id), default_routes)
+            self.assertListEqual(json_response, expected_result)
 
     def test_create_route(self):
         data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
