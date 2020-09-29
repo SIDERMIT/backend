@@ -236,6 +236,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         transport_mode_dict = dict()
 
         route_tuple = []
+        all_routes = []
         for default_route in default_routes:
             transport_mode_public_id = default_route['transportMode']
             if transport_mode_public_id not in transport_mode_dict:
@@ -266,16 +267,15 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
                                                                       express=default_route['odExclusive']),
                                     transport_mode_public_id))
 
-            new_routes = []
             for (routes, transport_mode_public_id) in route_tuple:
                 for route in routes:
-                    new_routes.append(
+                    all_routes.append(
                         dict(route_id=route.id, transport_mode_public_id=transport_mode_public_id,
                              nodes_sequence_i=route.nodes_sequence_i, nodes_sequence_r=route.nodes_sequence_r,
                              stops_sequence_i=route.stops_sequence_i, stops_sequence_r=route.stops_sequence_r,
                              type=route._type.value))
 
-        return Response(new_routes, status.HTTP_200_OK)
+        return Response(all_routes, status.HTTP_200_OK)
 
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
