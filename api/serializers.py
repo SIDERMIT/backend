@@ -82,6 +82,7 @@ class RouteSerializer(serializers.ModelSerializer):
 class TransportNetworkSerializer(serializers.ModelSerializer):
     route_set = RouteSerializer(many=True, read_only=True)
     scene_public_id = serializers.UUIDField(write_only=True)
+    public_id = serializers.UUIDField(read_only=True)
 
     def validate_scene_public_id(self, value):
         try:
@@ -99,7 +100,7 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TransportNetwork
-        fields = ('name', 'created_at', 'route_set', 'scene_public_id')
+        fields = ('name', 'created_at', 'route_set', 'scene_public_id', 'public_id')
 
 
 class BaseCitySerializer(serializers.ModelSerializer):
