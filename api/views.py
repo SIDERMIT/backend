@@ -199,7 +199,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
     """
     serializer_class = TransportNetworkSerializer
     lookup_field = 'public_id'
-    queryset = TransportNetwork.objects.prefetch_related('route_set__transport_mode')
+    queryset = TransportNetwork.objects.select_related('optimization').prefetch_related('route_set__transport_mode')
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):
@@ -207,6 +207,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         new_transport_network_obj = self.get_object()
 
         new_transport_network_obj.pk = None
+        new_transport_network_obj.optimization = None
         new_transport_network_obj.created_at = now
         new_transport_network_obj.public_id = uuid.uuid4()
         new_transport_network_obj.save()

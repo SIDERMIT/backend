@@ -550,7 +550,7 @@ class SceneAPITest(BaseTestCase):
         self.scene_obj = self.city_obj.scene_set.all()[0]
 
     def test_retrieve_scene_with_public_id(self):
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             json_response = self.scenes_retrieve(self.client, self.scene_obj.public_id)
 
         self.assertIsNotNone(json_response['passenger'])
@@ -589,7 +589,7 @@ class SceneAPITest(BaseTestCase):
                                    fini=1)
         new_data = dict(name=new_scene_name, city_public_id=self.city_obj.public_id, passenger=passenger_data,
                         transportmode_set=[transport_mode_data])
-        with self.assertNumQueries(10):
+        with self.assertNumQueries(11):
             json_response = self.scenes_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -599,7 +599,7 @@ class SceneAPITest(BaseTestCase):
     def test_partial_update_scene(self):
         new_scene_name = 'name2'
         new_data = dict(name=new_scene_name, passenger=dict())
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -631,7 +631,7 @@ class SceneAPITest(BaseTestCase):
     def test_update_passenger(self):
         passenger_data = dict(va=3, pv=3, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
         scene_data = dict(passenger=passenger_data)
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
                                                        status_code=status.HTTP_200_OK)
 
@@ -642,7 +642,7 @@ class SceneAPITest(BaseTestCase):
         passenger_data = dict(va=3)
         scene_data = dict(passenger=passenger_data)
 
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
                                                        status_code=status.HTTP_200_OK)
         self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
@@ -726,8 +726,8 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
 
     def test_create_transport_network(self):
-        fields = dict(name='scene name', scene_public_id=self.scene_obj.public_id)
-        with self.assertNumQueries(3):
+        fields = dict(name='transport network name', scene_public_id=self.scene_obj.public_id)
+        with self.assertNumQueries(4):
             self.transport_network_create(self.client, fields)
 
         self.assertEqual(TransportNetwork.objects.count(), 2)
@@ -772,7 +772,7 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertEqual(TransportNetwork.objects.count(), 0)
 
     def test_duplicate_transport_network(self):
-        with self.assertNumQueries(11):
+        with self.assertNumQueries(12):
             json_response = self.transport_network_duplicate_action(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(TransportNetwork.objects.count(), 2)
