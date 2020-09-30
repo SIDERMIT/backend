@@ -513,9 +513,6 @@ class CityAPITest(BaseTestCase):
         ]
         excepted_demand_matrix_header = ['CBD', 'P_1', 'SC_1', 'P_2', 'SC_2', 'P_3', 'SC_3', 'P_4', 'SC_4']
         self.maxDiff = None
-        print(json_response)
-        print(dict(demand_matrix=expected_demand_matrix_file,
-                   demand_matrix_header=excepted_demand_matrix_header))
         self.assertDictEqual(json_response, dict(demand_matrix=expected_demand_matrix_file,
                                                  demand_matrix_header=excepted_demand_matrix_header))
 
