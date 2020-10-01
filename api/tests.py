@@ -78,7 +78,8 @@ class BaseTestCase(TestCase):
                     for q in range(route_number):
                         Route.objects.create(transport_network=transport_network_obj, name='route {0}'.format(q),
                                              transport_mode=transport_mode_obj_list[0], node_sequence_i='1,2,3',
-                                             stop_sequence_i='1,3', node_sequence_r='3,2,1', stop_sequence_r='3,1')
+                                             stop_sequence_i='1,3', node_sequence_r='3,2,1', stop_sequence_r='3,1',
+                                             type=1)
 
             data.append(city_obj)
 
@@ -726,7 +727,7 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
 
     def test_create_transport_network(self):
-        fields = dict(name='transport network name', scene_public_id=self.scene_obj.public_id)
+        fields = dict(name='transport network name', scene_public_id=self.scene_obj.public_id, route_set=[])
         with self.assertNumQueries(4):
             self.transport_network_create(self.client, fields)
 
@@ -746,7 +747,7 @@ class TransportNetworkAPITest(BaseTestCase):
 
     def test_update_transport_network(self):
         new_scene_name = 'name2'
-        new_data = dict(name=new_scene_name, scene_public_id=self.scene_obj.public_id)
+        new_data = dict(name=new_scene_name, scene_public_id=self.scene_obj.public_id, route_set=[])
         with self.assertNumQueries(7):
             json_response = self.transport_network_update(self.client, self.transport_network_obj.public_id, new_data)
 
@@ -852,7 +853,8 @@ class TransportNetworkAPITest(BaseTestCase):
 
     def test_create_route(self):
         data = dict(name='new name', node_sequence_i='1,2,3', stop_sequence_i='3,2,1', node_sequence_r='4,5,6',
-                    stop_sequence_r='6,5,4', transport_mode_public_id=TransportMode.objects.first().public_id)
+                    type=Route.CUSTOM, stop_sequence_r='6,5,4',
+                    transport_mode_public_id=TransportMode.objects.first().public_id)
         with self.assertNumQueries(3):
             json_response = self.transport_network_route_create(self.client, self.transport_network_obj.public_id, data)
 

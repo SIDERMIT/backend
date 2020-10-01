@@ -98,6 +98,15 @@ class Route(models.Model):
     stop_sequence_i = models.CharField(max_length=50)
     node_sequence_r = models.CharField(max_length=50, null=True)
     stop_sequence_r = models.CharField(max_length=50, null=True)
+    CUSTOM = 1
+    PREDEFINED = 2
+    CIRCULAR = 3
+    TYPE_CHOICES = (
+        (CUSTOM, 'CUSTOM'),
+        (PREDEFINED, 'PREDEFINED'),
+        (CIRCULAR, 'CIRCULAR')
+    )
+    type = models.IntegerField(null=False, choices=TYPE_CHOICES)
 
     def get_sidermit_route(self, transport_mode_obj, route_type):
         return SidermitRoute(self.name, transport_mode_obj, self.node_sequence_i, self.node_sequence_r,
