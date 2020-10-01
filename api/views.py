@@ -207,6 +207,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         new_transport_network_obj = self.get_object()
 
         new_transport_network_obj.pk = None
+        new_transport_network_obj.name = '{0} copy'.format(new_transport_network_obj.name)
         new_transport_network_obj.optimization = None
         new_transport_network_obj.created_at = now
         new_transport_network_obj.public_id = uuid.uuid4()
