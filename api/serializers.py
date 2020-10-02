@@ -1,9 +1,10 @@
 import logging
 
+from django.db import transaction
 from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
-from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode
+from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode, RouteType as SidermitRouteType
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
@@ -50,58 +51,115 @@ class RouteSerializer(serializers.ModelSerializer):
     transport_mode = TransportModeSerializer(many=False, read_only=True)
     transport_mode_public_id = serializers.UUIDField(write_only=True)
 
-    def validate_transport_mode_public_id(self, value):
-        try:
-            transport_mode_obj = TransportMode.objects.get(public_id=value)
-        except TransportMode.DoesNotExist:
-            raise serializers.ValidationError('Transport mode does not exist')
-
-        return transport_mode_obj
-
-    def create(self, validated_data):
-        try:
-            transport_network_obj = TransportNetwork.objects. \
-                get(public_id=self.context['view'].kwargs['transport_network_public_id'])
-        except TransportNetwork.DoesNotExist:
-            raise serializers.ValidationError('Transport network does not exist')
-
-        transport_mode_obj = validated_data.pop('transport_mode_public_id')
-        route_obj = Route.objects.create(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
-                                         **validated_data)
-
-        return route_obj
-
     class Meta:
         model = Route
         fields = (
             'created_at', 'public_id', 'name', 'node_sequence_i', 'stop_sequence_i', 'node_sequence_r',
-            'stop_sequence_r', 'transport_mode_public_id', 'transport_mode')
-        read_only_fields = ['created_at', 'public_id']
+            'stop_sequence_r', 'transport_mode_public_id', 'transport_mode', 'type')
+        read_only_fields = ['created_at']
 
 
 class TransportNetworkSerializer(serializers.ModelSerializer):
-    route_set = RouteSerializer(many=True, read_only=True)
+    route_set = RouteSerializer(many=True)
     scene_public_id = serializers.UUIDField(write_only=True)
-    public_id = serializers.UUIDField(read_only=True)
     optimization_status = serializers.CharField(source='optimization.status', read_only=True)
 
     def validate_scene_public_id(self, value):
         try:
-            scene_obj = Scene.objects.get(public_id=value)
+            scene_obj = Scene.objects.select_related('city').prefetch_related('transportmode_set').get(public_id=value)
         except Scene.DoesNotExist:
             raise serializers.ValidationError('Scene does not exist')
 
         return scene_obj
 
+    def validate(self, attrs):
+        previous_data = attrs.copy()
+        try:
+            try:
+                scene_obj = previous_data.pop('scene_public_id')
+            except KeyError:
+                # key does not exists so it is a validation for update
+                scene_obj = TransportNetwork.objects.select_related('scene__city'). \
+                    get(public_id=self.context['view'].kwargs['public_id']).scene
+
+            route_set = previous_data.pop('route_set')
+
+            transportmode_dict = {tm.public_id: (tm, tm.get_sidermit_transport_mode()) for tm in
+                                  scene_obj.transportmode_set.all()}
+
+            transport_network_obj = TransportNetwork(scene=scene_obj, **previous_data)
+            sidermit_network_obj = transport_network_obj.get_sidermit_network(scene_obj.city.get_sidermit_graph())
+            for route in route_set:
+                try:
+                    transport_mode_obj, sidermit_transport_mode = transportmode_dict[route['transport_mode_public_id']]
+                except KeyError:
+                    raise serializers.ValidationError('Transport mode does not exist')
+                route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
+                                  name=route['name'],
+                                  node_sequence_i=route['node_sequence_i'], stop_sequence_i=route['stop_sequence_i'],
+                                  node_sequence_r=route['node_sequence_r'], stop_sequence_r=route['stop_sequence_r'])
+                sidermit_network_obj.add_route(
+                    route_obj.get_sidermit_route(sidermit_transport_mode, SidermitRouteType(int(route['type']))))
+
+        except SIDERMITException as e:
+            raise serializers.ValidationError(e)
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        route_set = validated_data.pop('route_set')
+
+        with transaction.atomic():
+            # update attributes of transport network
+            for key in validated_data:
+                setattr(instance, key, validated_data.get(key))
+            instance.save()
+
+            route_public_id_list = []
+            for route in route_set:
+                transport_mode_public_id = route.pop('transport_mode_public_id')
+                transport_mode_obj = TransportMode.objects.get(public_id=transport_mode_public_id)
+                if 'public_id' in route:
+                    public_id = route.pop('public_id')
+                    route_public_id_list.append(public_id)
+                    Route.objects.filter(public_id=public_id).update(transport_mode=transport_mode_obj, **route)
+                else:
+                    route_obj = Route.objects.create(transport_mode=transport_mode_obj, transport_network=instance,
+                                                     **route)
+                    route_public_id_list.append(route_obj.public_id)
+
+            Route.objects.filter(transport_network=instance).exclude(public_id__in=route_public_id_list).delete()
+
+        return instance
+
     def create(self, validated_data):
+        # ignore public_id if exists
+        try:
+            validated_data.pop('public_id')
+        except KeyError:
+            pass
+        route_set = validated_data.pop('route_set')
         scene_obj = validated_data.pop('scene_public_id')
-        transport_network_obj = TransportNetwork.objects.create(scene=scene_obj, **validated_data)
+
+        with transaction.atomic():
+            transport_network_obj = TransportNetwork.objects.create(scene=scene_obj, **validated_data)
+            route_list = []
+            for route in route_set:
+                transport_mode_obj = TransportMode.objects.get(public_id=route['transport_mode_public_id'])
+                route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
+                                  name=route['name'],
+                                  node_sequence_i=route['node_sequence_i'], stop_sequence_i=route['stop_sequence_i'],
+                                  node_sequence_r=route['node_sequence_r'], stop_sequence_r=route['stop_sequence_r'],
+                                  type=int(route['type']))
+                route_list.append(route_obj)
+            Route.objects.bulk_create(route_list)
 
         return transport_network_obj
 
     class Meta:
         model = TransportNetwork
         fields = ('name', 'created_at', 'route_set', 'scene_public_id', 'public_id', 'optimization_status')
+        read_only_fields = ['created_at', 'optimization_status']
 
 
 class BaseCitySerializer(serializers.ModelSerializer):
