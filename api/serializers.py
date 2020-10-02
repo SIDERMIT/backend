@@ -49,7 +49,7 @@ class TransportModeSerializer(serializers.ModelSerializer):
 
 class RouteSerializer(serializers.ModelSerializer):
     transport_mode = TransportModeSerializer(many=False, read_only=True)
-    transport_mode_public_id = serializers.UUIDField(write_only=True)
+    transport_mode_public_id = serializers.UUIDField(source='transport_mode.public_id')
 
     class Meta:
         model = Route
@@ -91,7 +91,8 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
             sidermit_network_obj = transport_network_obj.get_sidermit_network(scene_obj.city.get_sidermit_graph())
             for route in route_set:
                 try:
-                    transport_mode_obj, sidermit_transport_mode = transportmode_dict[route['transport_mode_public_id']]
+                    transport_mode_public_id = route['transport_mode']['public_id']
+                    transport_mode_obj, sidermit_transport_mode = transportmode_dict[transport_mode_public_id]
                 except KeyError:
                     raise serializers.ValidationError('Transport mode does not exist')
                 route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
@@ -119,7 +120,7 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
 
             route_public_id_list = []
             for route in route_set:
-                transport_mode_public_id = route.pop('transport_mode_public_id')
+                transport_mode_public_id = route.pop('transport_mode')['public_id']
                 transport_mode_obj = TransportMode.objects.get(public_id=transport_mode_public_id)
                 if 'public_id' in route:
                     public_id = route.pop('public_id')
@@ -147,7 +148,7 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
             transport_network_obj = TransportNetwork.objects.create(scene=scene_obj, **validated_data)
             route_list = []
             for route in route_set:
-                transport_mode_obj = TransportMode.objects.get(public_id=route['transport_mode_public_id'])
+                transport_mode_obj = TransportMode.objects.get(public_id=route['transport_mode']['public_id'])
                 route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
                                   name=route['name'],
                                   nodes_sequence_i=route['nodes_sequence_i'],
