@@ -54,8 +54,8 @@ class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
         fields = (
-            'created_at', 'public_id', 'name', 'node_sequence_i', 'stop_sequence_i', 'node_sequence_r',
-            'stop_sequence_r', 'transport_mode_public_id', 'transport_mode', 'type')
+            'created_at', 'public_id', 'name', 'nodes_sequence_i', 'stops_sequence_i', 'nodes_sequence_r',
+            'stops_sequence_r', 'transport_mode_public_id', 'transport_mode', 'type')
         read_only_fields = ['created_at']
 
 
@@ -96,8 +96,10 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError('Transport mode does not exist')
                 route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
                                   name=route['name'],
-                                  node_sequence_i=route['node_sequence_i'], stop_sequence_i=route['stop_sequence_i'],
-                                  node_sequence_r=route['node_sequence_r'], stop_sequence_r=route['stop_sequence_r'])
+                                  nodes_sequence_i=route['nodes_sequence_i'],
+                                  stops_sequence_i=route['stops_sequence_i'],
+                                  nodes_sequence_r=route['nodes_sequence_r'],
+                                  stops_sequence_r=route['stops_sequence_r'])
                 sidermit_network_obj.add_route(
                     route_obj.get_sidermit_route(sidermit_transport_mode, SidermitRouteType(int(route['type']))))
 
@@ -148,8 +150,10 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
                 transport_mode_obj = TransportMode.objects.get(public_id=route['transport_mode_public_id'])
                 route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
                                   name=route['name'],
-                                  node_sequence_i=route['node_sequence_i'], stop_sequence_i=route['stop_sequence_i'],
-                                  node_sequence_r=route['node_sequence_r'], stop_sequence_r=route['stop_sequence_r'],
+                                  nodes_sequence_i=route['nodes_sequence_i'],
+                                  stops_sequence_i=route['stops_sequence_i'],
+                                  nodes_sequence_r=route['nodes_sequence_r'],
+                                  stops_sequence_r=route['stops_sequence_r'],
                                   type=int(route['type']))
                 route_list.append(route_obj)
             Route.objects.bulk_create(route_list)

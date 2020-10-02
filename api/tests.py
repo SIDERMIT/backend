@@ -77,8 +77,8 @@ class BaseTestCase(TestCase):
 
                     for q in range(route_number):
                         Route.objects.create(transport_network=transport_network_obj, name='route {0}'.format(q),
-                                             transport_mode=transport_mode_obj_list[0], node_sequence_i='1,2',
-                                             stop_sequence_i='1,2', node_sequence_r='2,1', stop_sequence_r='2,1',
+                                             transport_mode=transport_mode_obj_list[0], nodes_sequence_i='1,2',
+                                             stops_sequence_i='1,2', nodes_sequence_r='2,1', stops_sequence_r='2,1',
                                              type=Route.CUSTOM)
 
             data.append(city_obj)
@@ -687,8 +687,8 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertDictEqual(json_response, TransportNetworkSerializer(self.transport_network_obj).data)
 
     def test_create_transport_network(self):
-        route_data = dict(name='new name', node_sequence_i='1,2', stop_sequence_i='1,2', node_sequence_r='2,1',
-                          stop_sequence_r='2,1', type=Route.CUSTOM,
+        route_data = dict(name='new name', nodes_sequence_i='1,2', stops_sequence_i='1,2', nodes_sequence_r='2,1',
+                          stops_sequence_r='2,1', type=Route.CUSTOM,
                           transport_mode_public_id=TransportMode.objects.first().public_id)
         fields = dict(name='transport network name', scene_public_id=self.scene_obj.public_id, route_set=[route_data])
         with self.assertNumQueries(10):
@@ -815,8 +815,8 @@ class TransportNetworkAPITest(BaseTestCase):
             self.assertListEqual(json_response, expected_result)
 
     def test_create_route(self):
-        route_data = dict(name='new name', node_sequence_i='1,2', stop_sequence_i='1,2', node_sequence_r='2,1',
-                          stop_sequence_r='2,1', type=Route.CUSTOM,
+        route_data = dict(name='new name', nodes_sequence_i='1,2', stops_sequence_i='1,2', nodes_sequence_r='2,1',
+                          stops_sequence_r='2,1', type=Route.CUSTOM,
                           transport_mode_public_id=TransportMode.objects.first().public_id)
         data = dict(name='transport network test', scene_public_id=self.scene_obj.public_id, route_set=[route_data])
         with self.assertNumQueries(10):
@@ -826,8 +826,8 @@ class TransportNetworkAPITest(BaseTestCase):
         self.assertDictEqual(json_response['route_set'][0], RouteSerializer(Route.objects.order_by('-id').first()).data)
 
     def test_create_route_but_transport_mode_does_not_exist(self):
-        route_data = dict(name='new name', node_sequence_i='1,2', stop_sequence_i='1,2', node_sequence_r='2,1',
-                          stop_sequence_r='2,1', type=Route.CUSTOM, transport_mode_public_id=str(uuid.uuid4()))
+        route_data = dict(name='new name', nodes_sequence_i='1,2', stops_sequence_i='1,2', nodes_sequence_r='2,1',
+                          stops_sequence_r='2,1', type=Route.CUSTOM, transport_mode_public_id=str(uuid.uuid4()))
         data = dict(name='transport network test', scene_public_id=self.scene_obj.public_id, route_set=[route_data])
         with self.assertNumQueries(2):
             json_response = self.transport_network_create(self.client, data,
@@ -839,8 +839,8 @@ class TransportNetworkAPITest(BaseTestCase):
     def test_update_route(self):
         public_id = self.transport_network_obj.route_set.all()[0].public_id
         transport_mode_obj = TransportMode.objects.first()
-        route_data = dict(name='new name', public_id=str(public_id), node_sequence_i='1,2', stop_sequence_i='1,2',
-                          node_sequence_r='2,1', stop_sequence_r='2,1', type=Route.PREDEFINED,
+        route_data = dict(name='new name', public_id=str(public_id), nodes_sequence_i='1,2', stops_sequence_i='1,2',
+                          nodes_sequence_r='2,1', stops_sequence_r='2,1', type=Route.PREDEFINED,
                           transport_mode_public_id=str(transport_mode_obj.public_id))
         data = dict(name='new_name', scene_public_id=self.scene_obj.public_id, route_set=[route_data])
 
@@ -863,12 +863,12 @@ class TransportNetworkAPITest(BaseTestCase):
         route_set = []
         for route in self.transport_network_obj.route_set.all():
             route_set.append(
-                dict(name=route.name, node_sequence_i=route.node_sequence_i, stop_sequence_i=route.stop_sequence_i,
-                     node_sequence_r=route.node_sequence_r, stop_sequence_r=route.stop_sequence_r, type=route.type,
+                dict(name=route.name, nodes_sequence_i=route.nodes_sequence_i, stops_sequence_i=route.stops_sequence_i,
+                     nodes_sequence_r=route.nodes_sequence_r, stops_sequence_r=route.stops_sequence_r, type=route.type,
                      transport_mode_public_id=route.transport_mode.public_id, public_id=route.public_id))
         transport_mode_obj = TransportMode.objects.first()
-        route_data = dict(name='new route', node_sequence_i='1,2', stop_sequence_i='1,2',
-                          node_sequence_r='2,1', stop_sequence_r='2,1', type=Route.CUSTOM,
+        route_data = dict(name='new route', nodes_sequence_i='1,2', stops_sequence_i='1,2',
+                          nodes_sequence_r='2,1', stops_sequence_r='2,1', type=Route.CUSTOM,
                           transport_mode_public_id=str(transport_mode_obj.public_id))
         route_set.append(route_data)
         data = dict(name='new_name', scene_public_id=self.scene_obj.public_id, route_set=route_set)

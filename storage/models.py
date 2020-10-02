@@ -94,10 +94,10 @@ class Route(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     public_id = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=50)
-    node_sequence_i = models.CharField(max_length=50)
-    stop_sequence_i = models.CharField(max_length=50)
-    node_sequence_r = models.CharField(max_length=50, null=True)
-    stop_sequence_r = models.CharField(max_length=50, null=True)
+    nodes_sequence_i = models.CharField(max_length=50)
+    stops_sequence_i = models.CharField(max_length=50)
+    nodes_sequence_r = models.CharField(max_length=50, null=True)
+    stops_sequence_r = models.CharField(max_length=50, null=True)
     CUSTOM = 1
     PREDEFINED = 2
     CIRCULAR = 3
@@ -109,8 +109,8 @@ class Route(models.Model):
     type = models.IntegerField(null=False, choices=TYPE_CHOICES)
 
     def get_sidermit_route(self, transport_mode_obj, route_type):
-        return SidermitRoute(self.name, transport_mode_obj, self.node_sequence_i, self.node_sequence_r,
-                             self.stop_sequence_i, self.stop_sequence_r, route_type)
+        return SidermitRoute(self.name, transport_mode_obj, self.nodes_sequence_i, self.nodes_sequence_r,
+                             self.stops_sequence_i, self.stops_sequence_r, route_type)
 
     class Meta:
         unique_together = ('transport_network', 'name')
