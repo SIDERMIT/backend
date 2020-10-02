@@ -272,7 +272,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
             for (routes, transport_mode_public_id) in route_tuple:
                 for route in routes:
                     all_routes.append(
-                        dict(route_id=route.id, transport_mode_public_id=transport_mode_public_id,
+                        dict(name=route.id, transport_mode_public_id=transport_mode_public_id,
                              nodes_sequence_i=route.nodes_sequence_i, nodes_sequence_r=route.nodes_sequence_r,
                              stops_sequence_i=route.stops_sequence_i, stops_sequence_r=route.stops_sequence_r,
                              type=route._type.value))
