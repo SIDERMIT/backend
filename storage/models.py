@@ -112,6 +112,9 @@ class Route(models.Model):
         return SidermitRoute(self.name, transport_mode_obj, self.node_sequence_i, self.node_sequence_r,
                              self.stop_sequence_i, self.stop_sequence_r, route_type)
 
+    class Meta:
+        unique_together = ('transport_network', 'name')
+
 
 class Optimization(models.Model):
     transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
