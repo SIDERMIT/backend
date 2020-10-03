@@ -13,6 +13,7 @@ from sidermit.publictransportsystem import TransportNetwork as SidermitTransport
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
 from api.utils import get_network_descriptor
+from rqworkers.jobs import optimize_transport_network
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
 
 logger = logging.getLogger(__name__)
@@ -277,6 +278,25 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
                              type=route._type.value))
 
         return Response(all_routes, status.HTTP_200_OK)
+
+    @action(detail=True, methods=['POST'])
+    def run_optimization(self, request, public_id=None):
+        transport_network_obj = self.get_object()
+        transport_network_obj.optimization_status = TransportNetwork.STATUS_QUEUED
+        transport_network_obj.save()
+
+        # async task
+        optimize_transport_network.delay(transport_network_obj.public_id)
+
+        return Response(transport_network_obj)
+
+    @action(detail=True, methods=['POST'])
+    def cancel_optimization(self, request, public_id=None):
+        now = timezone.now()
+        # TODO: improve
+        transport_network_obj = self.get_object()
+
+        return Response(transport_network_obj)
 
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
