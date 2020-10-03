@@ -29,8 +29,8 @@ class City(models.Model):
     def get_sidermit_graph(self):
         return Graph.build_from_content(self.graph, GraphContentFormat.PAJEK)
 
-    def get_sidermit_demand_matrix(self):
-        return Demand.build_from_content(self.demand_matrix)
+    def get_sidermit_demand_matrix(self, graph):
+        return Demand.build_from_content(graph, self.demand_matrix)
 
 
 class Scene(models.Model):
