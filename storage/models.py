@@ -101,6 +101,7 @@ class TransportNetwork(models.Model):
     )
     optimization_status = models.CharField(max_length=20, choices=status_choices, default=None, null=True)
     optimization_ran_at = models.DateTimeField(default=None, null=True)
+    optimization_error_message = models.TextField(default=None, null=True)
 
     def get_sidermit_network(self, city_graph):
         return SidermitTransportNetwork(city_graph)

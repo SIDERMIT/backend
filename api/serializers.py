@@ -62,7 +62,6 @@ class RouteSerializer(serializers.ModelSerializer):
 class TransportNetworkSerializer(serializers.ModelSerializer):
     route_set = RouteSerializer(many=True)
     scene_public_id = serializers.UUIDField(write_only=True)
-    optimization_status = serializers.CharField(source='optimization.status', read_only=True)
 
     def validate_scene_public_id(self, value):
         try:
@@ -163,8 +162,10 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TransportNetwork
-        fields = ('name', 'created_at', 'route_set', 'scene_public_id', 'public_id', 'optimization_status')
-        read_only_fields = ['created_at', 'optimization_status']
+        fields = (
+            'name', 'created_at', 'route_set', 'scene_public_id', 'public_id', 'optimization_status',
+            'optimization_ran_at', 'optimization_error_message')
+        read_only_fields = ['created_at', 'optimization_status', 'optimization_ran_at', 'optimization_error_message']
 
 
 class BaseCitySerializer(serializers.ModelSerializer):
