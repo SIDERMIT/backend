@@ -71,6 +71,13 @@ def optimize_transport_network(transport_network_public_id):
         sub_table_r = route[8]
 
         OptimizationResultPerRouteDetail.objects.filter(opt_route=opt_result_per_route_obj).delete()
-        for node_i, node_j, charge_ij in sub_table_i + sub_table_r:
-            OptimizationResultPerRouteDetail.objects.create(opt_route=opt_result_per_route_obj, origin_node=node_i,
-                                                            destination_node=node_j, lambda_value=charge_ij)
+        for node_i, node_j, charge_ij in sub_table_i:
+            OptimizationResultPerRouteDetail.objects.create(opt_route=opt_result_per_route_obj,
+                                                            direction=OptimizationResultPerRouteDetail.DIRECTION_I,
+                                                            origin_node=node_i, destination_node=node_j,
+                                                            lambda_value=charge_ij)
+        for node_i, node_j, charge_ij in sub_table_r:
+            OptimizationResultPerRouteDetail.objects.create(opt_route=opt_result_per_route_obj,
+                                                            direction=OptimizationResultPerRouteDetail.DIRECTION_R,
+                                                            origin_node=node_i, destination_node=node_j,
+                                                            lambda_value=charge_ij)

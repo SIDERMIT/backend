@@ -171,6 +171,13 @@ class OptimizationResultPerRoute(models.Model):
 class OptimizationResultPerRouteDetail(models.Model):
     """ result for each arc related to route """
     opt_route = models.ForeignKey(OptimizationResultPerRoute, on_delete=models.CASCADE)
+    DIRECTION_I = 'i'
+    DIRECTION_R = 'r'
+    DIRECTION_CHOICES = (
+        (DIRECTION_I, 'going'),
+        (DIRECTION_R, 'reverse')
+    )
+    direction = models.CharField(max_length=1, choices=DIRECTION_CHOICES)
     origin_node = models.IntegerField()
     destination_node = models.IntegerField()
     lambda_value = models.FloatField()
