@@ -80,6 +80,9 @@ class TransportMode(models.Model):
         return SidermitTransportMode(self.name, self.bya, self.co, self.c1, self.c2, self.v, self.t, self.fmax,
                                      self.kmax, self.theta, self.tat, self.d, self.fini)
 
+    class Meta:
+        unique_together = ['scene', 'name']
+
 
 class TransportNetwork(models.Model):
     scene = models.ForeignKey(Scene, on_delete=models.CASCADE)
