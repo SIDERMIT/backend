@@ -14,7 +14,6 @@ from api.serializers import CitySerializer, SceneSerializer, TransportModeSerial
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
-from storage.models import Optimization
 
 logger = logging.getLogger(__name__)
 
@@ -171,13 +170,10 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         """ summarize results of optimizations in all transport networks """
         scene_obj = self.get_object()
         rows = []
-        for transport_network in TransportNetwork.objects.filter(scene=scene_obj). \
-                prefetch_related('optimization__optimizationresultpermode_set__transport_mode'). \
-                select_related('optimization__optimizationresult'):
-            try:
-                rows.append(TransportNetworkOptimizationSerializer(transport_network.optimization).data)
-            except Optimization.DoesNotExist:
-                pass
+        for transport_network in TransportNetwork.objects.prefetch_related(
+                'optimizationresultpermode_set__transport_mode').filter(scene=scene_obj,
+                                                                        optimization_status__isnull=False):
+            rows.append(TransportNetworkOptimizationSerializer(transport_network).data)
 
         return Response(rows, status.HTTP_200_OK)
 
@@ -199,7 +195,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
     """
     serializer_class = TransportNetworkSerializer
     lookup_field = 'public_id'
-    queryset = TransportNetwork.objects.select_related('optimization').prefetch_related('route_set__transport_mode')
+    queryset = TransportNetwork.objects.prefetch_related('route_set__transport_mode')
 
     @action(detail=True, methods=['POST'])
     def duplicate(self, request, public_id=None):
@@ -208,7 +204,8 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
 
         new_transport_network_obj.pk = None
         new_transport_network_obj.name = '{0} copy'.format(new_transport_network_obj.name)
-        new_transport_network_obj.optimization = None
+        new_transport_network_obj.optimization_status = None
+        new_transport_network_obj.optimization_ran_at = None
         new_transport_network_obj.created_at = now
         new_transport_network_obj.public_id = uuid.uuid4()
         new_transport_network_obj.save()
@@ -294,7 +291,8 @@ class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
 
 @api_view()
 def recent_optimizations(request):
-    optimizations = Optimization.objects.select_related('transport_network__scene__city').order_by('-created_at')[:4]
+    optimizations = TransportNetwork.objects.select_related('scene__city'). \
+                        exclude(optimization_ran_at__isnull=True).order_by('-optimization_ran_at')[:4]
     return Response(RecentOptimizationSerializer(optimizations, many=True).data)
 
 

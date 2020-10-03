@@ -8,7 +8,7 @@ from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMod
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
-    Optimization, TransportNetwork, Route
+    TransportNetwork, Route
 
 logger = logging.getLogger(__name__)
 
@@ -348,25 +348,25 @@ class OptimizationResultPerModeSerializer(serializers.ModelSerializer):
 
 
 class TransportNetworkOptimizationSerializer(serializers.ModelSerializer):
-    transport_network = TransportNetworkSerializer(many=False)
     optimizationresult = OptimizationResultSerializer(many=False)
     optimizationresultpermode_set = OptimizationResultPerModeSerializer(many=True)
 
     class Meta:
-        model = Optimization
-        fields = ('status', 'created_at', 'transport_network', 'optimizationresult', 'optimizationresultpermode_set')
+        model = TransportNetwork
+        fields = ('optimization_status', 'optimization_ran_at', 'created_at', 'optimizationresult',
+                  'optimizationresultpermode_set')
 
 
 class RecentOptimizationSerializer(serializers.ModelSerializer):
-    network_name = serializers.CharField(read_only=True, source='transport_network.name')
-    network_public_id = serializers.CharField(read_only=True, source='transport_network.public_id')
-    scene_name = serializers.CharField(read_only=True, source='transport_network.scene.name')
-    scene_public_id = serializers.CharField(read_only=True, source='transport_network.scene.public_id')
-    city_name = serializers.CharField(read_only=True, source='transport_network.scene.city.name')
-    city_public_id = serializers.CharField(read_only=True, source='transport_network.scene.city.public_id')
+    network_name = serializers.CharField(read_only=True, source='name')
+    network_public_id = serializers.CharField(read_only=True, source='public_id')
+    scene_name = serializers.CharField(read_only=True, source='scene.name')
+    scene_public_id = serializers.CharField(read_only=True, source='scene.public_id')
+    city_name = serializers.CharField(read_only=True, source='scene.city.name')
+    city_public_id = serializers.CharField(read_only=True, source='scene.city.public_id')
 
     class Meta:
-        model = Optimization
+        model = TransportNetwork
         fields = (
-            'status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id',
+            'optimization_status', 'network_name', 'scene_name', 'city_name', 'network_public_id', 'scene_public_id',
             'city_public_id')

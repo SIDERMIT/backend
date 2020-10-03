@@ -3,7 +3,7 @@ import uuid
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
-from sidermit.city import Graph, GraphContentFormat
+from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.publictransportsystem import Passenger as SidermitPassenger, TransportMode as SidermitTransportMode, \
     TransportNetwork as SidermitTransportNetwork, Route as SidermitRoute
 
@@ -28,6 +28,9 @@ class City(models.Model):
 
     def get_sidermit_graph(self):
         return Graph.build_from_content(self.graph, GraphContentFormat.PAJEK)
+
+    def get_sidermit_demand_matrix(self):
+        return Demand.build_from_content(self.demand_matrix)
 
 
 class Scene(models.Model):
@@ -83,6 +86,18 @@ class TransportNetwork(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=50)
     public_id = models.UUIDField(default=uuid.uuid4)
+    STATUS_QUEUED = 'queued'
+    STATUS_PROCESSING = 'processing'
+    STATUS_FINISHED = 'finished'
+    STATUS_ERROR = 'error'
+    status_choices = (
+        (STATUS_QUEUED, 'Queued'),
+        (STATUS_PROCESSING, 'Processing'),
+        (STATUS_FINISHED, 'Finished'),
+        (STATUS_ERROR, 'Error'),
+    )
+    optimization_status = models.CharField(max_length=20, choices=status_choices, default=None, null=True)
+    optimization_ran_at = models.DateTimeField(default=None, null=True)
 
     def get_sidermit_network(self, city_graph):
         return SidermitTransportNetwork(city_graph)
@@ -116,24 +131,8 @@ class Route(models.Model):
         unique_together = ('transport_network', 'name')
 
 
-class Optimization(models.Model):
-    transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(default=timezone.now)
-    STATUS_QUEUED = 'queued'
-    STATUS_PROCESSING = 'processing'
-    STATUS_FINISHED = 'finished'
-    STATUS_ERROR = 'error'
-    status_choices = (
-        (STATUS_QUEUED, 'Queued'),
-        (STATUS_PROCESSING, 'Processing'),
-        (STATUS_FINISHED, 'Finished'),
-        (STATUS_ERROR, 'Error'),
-    )
-    status = models.CharField(max_length=20, choices=status_choices, default=STATUS_QUEUED, null=False)
-
-
 class OptimizationResult(models.Model):
-    optimization = models.OneToOneField(Optimization, on_delete=models.CASCADE)
+    transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
     # optimization variables
     vrc = models.FloatField()
     co = models.FloatField()
@@ -146,7 +145,7 @@ class OptimizationResult(models.Model):
 
 
 class OptimizationResultPerMode(models.Model):
-    optimization = models.ForeignKey(Optimization, on_delete=models.CASCADE)
+    transport_network = models.ForeignKey(TransportNetwork, on_delete=models.CASCADE)
     transport_mode = models.ForeignKey(TransportMode, on_delete=models.CASCADE)
     # optimization variables
     b = models.FloatField()
@@ -155,7 +154,7 @@ class OptimizationResultPerMode(models.Model):
 
 
 class OptimizationResultPerRoute(models.Model):
-    optimization = models.OneToOneField(Optimization, on_delete=models.CASCADE)
+    transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
     # optimization variables
     frequency = models.FloatField()
