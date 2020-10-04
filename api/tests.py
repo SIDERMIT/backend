@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
-from sidermit.city import Graph, GraphContentFormat
+from sidermit.city import Graph, GraphContentFormat, Demand
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
     TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
@@ -54,9 +54,18 @@ class BaseTestCase(TestCase):
             name = 'city name {0}'.format(i)
             n, l, g, p = 4, 2, 3, 4
             graph_obj = Graph.build_from_parameters(n, l, g, p)
-            matrix = [[1, 2], [1, 2]]
+            demand_obj = Demand.build_from_parameters(graph_obj, 10000, 0.9, 0.5, 0.5)
+            demand_matrix = demand_obj.get_matrix()
+            demand_matrix_data = []
+            size = len(demand_matrix.keys())
+            for i in range(size):
+                row = []
+                for j in range(size):
+                    row.append(demand_matrix[i][j])
+                demand_matrix_data.append(row)
+
             city_obj = City.objects.create(name=name, graph=graph_obj.export_graph(GraphContentFormat.PAJEK),
-                                           n=n, l=l, g=g, p=p, demand_matrix=matrix)
+                                           n=n, l=l, g=g, p=p, demand_matrix=demand_matrix_data)
 
             for j in range(scene_number):
                 scene_obj = Scene.objects.create(name='s{0}-{1}'.format(i, j), city=city_obj)
@@ -250,6 +259,20 @@ class BaseTestCase(TestCase):
                                                        status_code=status.HTTP_200_OK):
         url = reverse('transport-networks-create-default-routes')
         data = dict(scene_public_id=scene_public_id, default_routes=default_routes)
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    # optimizations
+
+    def run_optimization(self, client, transport_network_public_id, status_code=status.HTTP_201_CREATED):
+        url = reverse('transport-networks-run-optimization', kwargs=dict(public_id=transport_network_public_id))
+        data = dict()
+
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
+
+    def cancel_optimization(self, client, transport_network_public_id, status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-cancel-optimization', kwargs=dict(public_id=transport_network_public_id))
+        data = dict()
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
@@ -907,6 +930,53 @@ class RecentOptimizationsAPITest(BaseTestCase):
         for opt in json_response:
             for field_name in fields:
                 self.assertIn(field_name, opt)
+
+
+class OptimizationActionTest(BaseTestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.create_data(city_number=1, scene_number=1, passenger=True, transport_mode_number=2,
+                         transport_network_number=1, route_number=0)
+        self.transport_network_obj = TransportNetwork.objects.first()
+
+    def test_run_optimization_with_wrong_data(self):
+        with self.assertNumQueries(7):
+            json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
+
+        self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)
+        self.assertIsNone(json_response['optimization_ran_at'])
+
+    def test_run_optimization_with_correct_data(self):
+        # TODO: check with Felive Vera
+        graph = self.transport_network_obj.scene.city.get_sidermit_graph()
+        network_obj = self.transport_network_obj.get_sidermit_network(graph)
+        # add feeder routes
+        transport_mode_obj = TransportMode.objects.first()
+        sidermit_transport_mode_obj = transport_mode_obj.get_sidermit_transport_mode()
+        routes = network_obj.get_feeder_routes(sidermit_transport_mode_obj) + \
+                 network_obj.get_circular_routes(sidermit_transport_mode_obj) + \
+                 network_obj.get_radial_routes(sidermit_transport_mode_obj, short=False, express=False) + \
+                 network_obj.get_diametral_routes(sidermit_transport_mode_obj, short=False, express=False, jump=1)
+
+        for route in routes:
+            Route.objects.create(transport_network=self.transport_network_obj, transport_mode=transport_mode_obj,
+                                 name=route.id, nodes_sequence_i=route.nodes_sequence_i,
+                                 stops_sequence_i=route.stops_sequence_i, nodes_sequence_r=route.nodes_sequence_r,
+                                 stops_sequence_r=route.stops_sequence_r, type=route._type.value)
+
+        with self.assertNumQueries(7):
+            json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
+
+        self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)
+        self.assertIsNone(json_response['optimization_ran_at'])
+
+    def test_cancel_optimization(self):
+        with self.assertNumQueries(4):
+            json_response = self.cancel_optimization(self.client, self.transport_network_obj.public_id)
+
+        self.assertIsNone(json_response['optimization_status'])
+        self.assertIsNone(json_response['optimization_ran_at'])
 
 
 class ValidationAPITest(BaseTestCase):

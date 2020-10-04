@@ -4,7 +4,7 @@ import uuid
 from django.utils import timezone
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action, api_view
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, ValidationError
 from rest_framework.response import Response
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
@@ -100,7 +100,6 @@ class CityViewSet(viewsets.ModelViewSet):
             graph_obj = Graph.build_from_content(city_obj.graph, GraphContentFormat.PAJEK)
 
             demand_obj = Demand.build_from_parameters(graph_obj, y, a, alpha, beta)
-
             demand_matrix = demand_obj.get_matrix()
             # pass matrix dict to list of list
             demand_matrix_data = []
@@ -282,21 +281,32 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
     @action(detail=True, methods=['POST'])
     def run_optimization(self, request, public_id=None):
         transport_network_obj = self.get_object()
+
+        if transport_network_obj.optimization_status in [TransportNetwork.STATUS_QUEUED,
+                                                         TransportNetwork.STATUS_PROCESSING]:
+            raise ValidationError("Transport network is queued or processing at this moment")
+
         transport_network_obj.optimization_status = TransportNetwork.STATUS_QUEUED
         transport_network_obj.save()
 
         # async task
         optimize_transport_network.delay(transport_network_obj.public_id)
 
-        return Response(transport_network_obj)
+        return Response(TransportNetworkSerializer(transport_network_obj).data, status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['POST'])
     def cancel_optimization(self, request, public_id=None):
-        now = timezone.now()
-        # TODO: improve
         transport_network_obj = self.get_object()
+        if transport_network_obj.optimization_status in [TransportNetwork.STATUS_ERROR,
+                                                         TransportNetwork.STATUS_FINISHED]:
+            raise ValidationError('Optimization is not running or queued')
 
-        return Response(transport_network_obj)
+        transport_network_obj.optimization_status = None
+        transport_network_obj.optimization_ran_at = None
+        transport_network_obj.optimization_error_message = None
+        transport_network_obj.save()
+
+        return Response(TransportNetworkSerializer(transport_network_obj).data, status.HTTP_200_OK)
 
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
