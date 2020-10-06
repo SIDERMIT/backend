@@ -4,7 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
-from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode, RouteType as SidermitRouteType
+from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
@@ -114,6 +114,12 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
             # update attributes of transport network
             for key in validated_data:
                 setattr(instance, key, validated_data.get(key))
+
+            if instance.optimization_status == TransportNetwork.STATUS_ERROR:
+                instance.optimization_status = None
+                instance.optimization_ran_at = None
+                instance.optimization_error_message = None
+                instance.duration = None
             instance.save()
 
             route_public_id_list = []
