@@ -4,6 +4,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 from sidermit.city import Graph, GraphContentFormat, Demand
+from sidermit.publictransportsystem import RouteType
 from sidermit.publictransportsystem import Passenger as SidermitPassenger, TransportMode as SidermitTransportMode, \
     TransportNetwork as SidermitTransportNetwork, Route as SidermitRoute
 
@@ -102,6 +103,7 @@ class TransportNetwork(models.Model):
     optimization_status = models.CharField(max_length=20, choices=status_choices, default=None, null=True)
     optimization_ran_at = models.DateTimeField(default=None, null=True)
     optimization_error_message = models.TextField(default=None, null=True)
+    optimization_duration = models.DurationField(default=None, null=True)
 
     def get_sidermit_network(self, city_graph):
         return SidermitTransportNetwork(city_graph)
@@ -127,9 +129,9 @@ class Route(models.Model):
     )
     type = models.IntegerField(null=False, choices=TYPE_CHOICES)
 
-    def get_sidermit_route(self, transport_mode_obj, route_type):
+    def get_sidermit_route(self, transport_mode_obj):
         return SidermitRoute(self.name, transport_mode_obj, self.nodes_sequence_i, self.nodes_sequence_r,
-                             self.stops_sequence_i, self.stops_sequence_r, route_type)
+                             self.stops_sequence_i, self.stops_sequence_r, RouteType(self.type))
 
     class Meta:
         unique_together = ('transport_network', 'name')
@@ -158,7 +160,7 @@ class OptimizationResultPerMode(models.Model):
 
 
 class OptimizationResultPerRoute(models.Model):
-    transport_network = models.OneToOneField(TransportNetwork, on_delete=models.CASCADE)
+    transport_network = models.ForeignKey(TransportNetwork, on_delete=models.CASCADE)
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
     # optimization variables
     frequency = models.FloatField()
