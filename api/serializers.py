@@ -8,7 +8,7 @@ from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMod
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
-    TransportNetwork, Route
+    TransportNetwork, Route, OptimizationResultPerRoute, OptimizationResultPerRouteDetail
 
 logger = logging.getLogger(__name__)
 
@@ -95,13 +95,12 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
                 except KeyError:
                     raise serializers.ValidationError('Transport mode does not exist')
                 route_obj = Route(transport_network=transport_network_obj, transport_mode=transport_mode_obj,
-                                  name=route['name'],
+                                  name=route['name'], type=int(route['type']),
                                   nodes_sequence_i=route['nodes_sequence_i'],
                                   stops_sequence_i=route['stops_sequence_i'],
                                   nodes_sequence_r=route['nodes_sequence_r'],
                                   stops_sequence_r=route['stops_sequence_r'])
-                sidermit_network_obj.add_route(
-                    route_obj.get_sidermit_route(sidermit_transport_mode, SidermitRouteType(int(route['type']))))
+                sidermit_network_obj.add_route(route_obj.get_sidermit_route(sidermit_transport_mode))
 
         except SIDERMITException as e:
             raise serializers.ValidationError(e)
@@ -354,8 +353,23 @@ class TransportNetworkOptimizationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TransportNetwork
-        fields = ('optimization_status', 'optimization_ran_at', 'created_at', 'optimizationresult',
-                  'optimizationresultpermode_set')
+        fields = ('optimization_status', 'optimization_ran_at', 'optimization_error_message', 'created_at',
+                  'optimizationresult', 'optimizationresultpermode_set', 'name', 'public_id')
+
+
+class OptimizationResultPerRouteDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OptimizationResultPerRouteDetail
+        fields = ('direction', 'origin_node', 'destination_node', 'lambda_value')
+
+
+class OptimizationResultPerRouteSerializer(serializers.ModelSerializer):
+    route = serializers.SlugRelatedField(many=False, read_only=True, slug_field='name')
+    optimizationresultperroutedetail_set = OptimizationResultPerRouteDetailSerializer(many=True)
+
+    class Meta:
+        model = OptimizationResultPerRoute
+        fields = ('route', 'frequency', 'k', 'b', 'tc', 'co', 'lambda_min', 'optimizationresultperroutedetail_set')
 
 
 class RecentOptimizationSerializer(serializers.ModelSerializer):
