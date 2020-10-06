@@ -11,7 +11,8 @@ from sidermit.exceptions import SIDERMITException
 from sidermit.publictransportsystem import TransportNetwork as SidermitTransportNetwork
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
-    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer
+    TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer, \
+    TransportNetworkOptimizationSerializer, OptimizationResultPerRoute, OptimizationResultPerRouteSerializer
 from api.utils import get_network_descriptor
 from rqworkers.jobs import optimize_transport_network
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
@@ -169,13 +170,12 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
     def global_results(self, request, public_id=None):
         """ summarize results of optimizations in all transport networks """
         scene_obj = self.get_object()
-        rows = []
-        for transport_network in TransportNetwork.objects.prefetch_related(
-                'optimizationresultpermode_set__transport_mode').filter(scene=scene_obj,
-                                                                        optimization_status__isnull=False):
-            rows.append(TransportNetworkOptimizationSerializer(transport_network).data)
+        queryset = TransportNetwork.objects.select_related('optimizationresult').prefetch_related(
+            'optimizationresultpermode_set__transport_mode').filter(scene=scene_obj, optimization_status__isnull=False)
+        rows = TransportNetworkOptimizationSerializer(queryset, many=True).data
+        response = dict(scene=SceneSerializer(scene_obj).data, rows=rows)
 
-        return Response(rows, status.HTTP_200_OK)
+        return Response(response, status.HTTP_200_OK)
 
 
 class TransportModeViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
@@ -307,6 +307,17 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         transport_network_obj.save()
 
         return Response(TransportNetworkSerializer(transport_network_obj).data, status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def results(self, request, public_id=None):
+        transport_network_obj = self.get_object()
+
+        opt_result = TransportNetworkOptimizationSerializer(transport_network_obj).data
+        opt_result_per_route = OptimizationResultPerRouteSerializer(
+            OptimizationResultPerRoute.objects.select_related('route').prefetch_related(
+                'optimizationresultperroutedetail_set').filter(transport_network=transport_network_obj), many=True).data
+
+        return Response(dict(opt_result=opt_result, opt_result_per_route=opt_result_per_route), status.HTTP_200_OK)
 
 
 class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,

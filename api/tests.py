@@ -9,9 +9,10 @@ from rest_framework.test import APIClient
 from sidermit.city import Graph, GraphContentFormat, Demand
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
-    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer
+    TransportNetworkOptimizationSerializer, TransportNetworkSerializer, RouteSerializer, \
+    OptimizationResultPerRouteSerializer
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, OptimizationResult, \
-    OptimizationResultPerMode, Route
+    OptimizationResultPerMode, Route, OptimizationResultPerRoute, OptimizationResultPerRouteDetail
 
 
 class BaseTestCase(TestCase):
@@ -54,7 +55,7 @@ class BaseTestCase(TestCase):
             name = 'city name {0}'.format(i)
             n, l, g, p = 4, 2, 3, 4
             graph_obj = Graph.build_from_parameters(n, l, g, p)
-            demand_obj = Demand.build_from_parameters(graph_obj, 10000, 0.9, 0.5, 0.5)
+            demand_obj = Demand.build_from_parameters(graph_obj, 15000, 0.8, 0.4, 0.5)
             demand_matrix = demand_obj.get_matrix()
             demand_matrix_data = []
             size = len(demand_matrix.keys())
@@ -75,8 +76,8 @@ class BaseTestCase(TestCase):
                 transport_mode_obj_list = []
                 for k in range(transport_mode_number):
                     transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), bya=1,
-                                                                      co=1, c1=1, c2=1, v=1, t=1, fmax=1, kmax=1,
-                                                                      theta=1, tat=1, d=1, fini=1, scene=scene_obj)
+                                                                      co=1, c1=1, c2=1, v=1, t=1, fmax=150, kmax=100,
+                                                                      theta=1, tat=1, d=4, fini=1, scene=scene_obj)
                     transport_mode_obj_list.append(transport_mode_obj)
 
                 for p in range(transport_network_number):
@@ -262,6 +263,12 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
+    def transport_network_results(self, client, transport_network_public_id, status_code=status.HTTP_200_OK):
+        url = reverse('transport-networks-results', kwargs=dict(public_id=transport_network_public_id))
+        data = dict()
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
     # optimizations
 
     def run_optimization(self, client, transport_network_public_id, status_code=status.HTTP_201_CREATED):
@@ -295,6 +302,10 @@ class CityAPITest(BaseTestCase):
         with self.assertNumQueries(5):
             json_response = self.cities_list(self.client, dict())
 
+        print(json_response[0])
+        print(CitySerializer(self.city_obj).data)
+
+        self.maxDiff = True
         self.assertEqual(len(json_response), 1)
         self.assertDictEqual(json_response[0], CitySerializer(self.city_obj).data)
 
@@ -643,16 +654,19 @@ class SceneAPITest(BaseTestCase):
                                                      transport_mode=transport_mode_obj,
                                                      b=i, k=i, l=i)
 
-        with self.assertNumQueries(8):
+        with self.assertNumQueries(7):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
-        self.assertListEqual(json_response, [TransportNetworkOptimizationSerializer(transport_network_obj).data])
+        self.assertListEqual(json_response['rows'],
+                             [TransportNetworkOptimizationSerializer(transport_network_obj).data])
+        self.assertIn('scene', json_response.keys())
 
     def test_get_global_result_without_optimization_data(self):
         with self.assertNumQueries(5):
             json_response = self.scenes_globalresults_action(self.client, self.scene_obj.public_id)
 
-        self.assertListEqual(json_response, [])
+        self.assertListEqual(json_response['rows'], [])
+        self.assertIn('scene', json_response.keys())
 
     def test_create_transport_mode(self):
         data = dict(name='new name', bya=1, co=2, c1=2, c2=2, v=2, t=2, fmax=2, kmax=2, theta=1, tat=2, d=2, fini=2)
@@ -910,6 +924,43 @@ class TransportNetworkAPITest(BaseTestCase):
 
         self.assertEqual(Route.objects.count(), 0)
 
+    def test_transport_network_results(self):
+        transport_network_obj = TransportNetwork.objects.first()
+        transport_network_obj.optimization_status = TransportNetwork.STATUS_FINISHED
+        transport_network_obj.optimization_ran_at = timezone.now()
+        transport_network_obj.save()
+
+        OptimizationResult.objects.create(transport_network=transport_network_obj, vrc=2, co=2, ci=2, cu=2, tv=2, tw=2,
+                                          ta=2, t=2)
+        for i, transport_mode_obj in enumerate(self.scene_obj.transportmode_set.all()):
+            OptimizationResultPerMode.objects.create(transport_network=transport_network_obj,
+                                                     transport_mode=transport_mode_obj,
+                                                     b=i, k=i, l=i)
+
+        route_obj = Route.objects.first()
+        opt_result_per_route_obj = OptimizationResultPerRoute.objects.create(
+            transport_network=transport_network_obj, route=route_obj, frequency=1, k=1, b=1, tc=1, co=1, lambda_min=1)
+        OptimizationResultPerRouteDetail.objects.create(
+            opt_route=opt_result_per_route_obj, direction=OptimizationResultPerRouteDetail.DIRECTION_I,
+            origin_node=1, destination_node=2, lambda_value=1)
+        OptimizationResultPerRouteDetail.objects.create(
+            opt_route=opt_result_per_route_obj, direction=OptimizationResultPerRouteDetail.DIRECTION_I,
+            origin_node=2, destination_node=3, lambda_value=1)
+
+        with self.assertNumQueries(9):
+            json_response = self.transport_network_results(self.client, transport_network_obj.public_id)
+
+        self.assertDictEqual(json_response['opt_result'],
+                             TransportNetworkOptimizationSerializer(transport_network_obj).data)
+        self.assertListEqual(json_response['opt_result_per_route'],
+                             [OptimizationResultPerRouteSerializer(opt_result_per_route_obj).data])
+
+    def test_transport_network_results_without_data(self):
+        with self.assertNumQueries(6):
+            json_response = self.transport_network_results(self.client, self.transport_network_obj.public_id)
+
+        self.assertDictEqual(json_response, dict(opt_result=[], opt_result_per_route=[]))
+
 
 class RecentOptimizationsAPITest(BaseTestCase):
 
@@ -941,7 +992,7 @@ class OptimizationActionTest(BaseTestCase):
         self.transport_network_obj = TransportNetwork.objects.first()
 
     def test_run_optimization_with_wrong_data(self):
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(8):
             json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)
@@ -955,24 +1006,30 @@ class OptimizationActionTest(BaseTestCase):
         transport_mode_obj = TransportMode.objects.first()
         sidermit_transport_mode_obj = transport_mode_obj.get_sidermit_transport_mode()
         routes = network_obj.get_feeder_routes(sidermit_transport_mode_obj) + \
-                 network_obj.get_circular_routes(sidermit_transport_mode_obj) + \
                  network_obj.get_radial_routes(sidermit_transport_mode_obj, short=False, express=False) + \
                  network_obj.get_diametral_routes(sidermit_transport_mode_obj, short=False, express=False, jump=1)
+        #        network_obj.get_circular_routes(sidermit_transport_mode_obj)
 
         for route in routes:
             Route.objects.create(transport_network=self.transport_network_obj, transport_mode=transport_mode_obj,
-                                 name=route.id, nodes_sequence_i=route.nodes_sequence_i,
-                                 stops_sequence_i=route.stops_sequence_i, nodes_sequence_r=route.nodes_sequence_r,
-                                 stops_sequence_r=route.stops_sequence_r, type=route._type.value)
+                                 name=route.id, type=route._type.value,
+                                 nodes_sequence_i=','.join([str(x) for x in route.nodes_sequence_i]),
+                                 stops_sequence_i=','.join([str(x) for x in route.stops_sequence_i]),
+                                 nodes_sequence_r=','.join([str(x) for x in route.nodes_sequence_r]),
+                                 stops_sequence_r=','.join([str(x) for x in route.stops_sequence_r]))
 
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(169):
             json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)
         self.assertIsNone(json_response['optimization_ran_at'])
 
+        self.transport_network_obj.refresh_from_db()
+        self.assertEqual(self.transport_network_obj.optimization_status, TransportNetwork.STATUS_FINISHED)
+        self.assertIsNotNone(self.transport_network_obj.optimization_ran_at)
+
     def test_cancel_optimization(self):
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(3):
             json_response = self.cancel_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertIsNone(json_response['optimization_status'])
