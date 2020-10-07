@@ -234,47 +234,54 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
 
         transport_mode_dict = dict()
 
-        route_tuple = []
-        all_routes = []
-        for default_route in default_routes:
-            transport_mode_public_id = default_route['transportMode']
-            if transport_mode_public_id not in transport_mode_dict:
-                transport_mode_obj = TransportMode.objects.get(public_id=transport_mode_public_id)
-                transport_mode_dict[transport_mode_public_id] = transport_mode_obj.get_sidermit_transport_mode()
+        try:
+            route_tuple = []
+            all_routes = []
+            for default_route in default_routes:
+                transport_mode_public_id = default_route['transportMode']
+                if transport_mode_public_id not in transport_mode_dict:
+                    transport_mode_obj = TransportMode.objects.get(public_id=transport_mode_public_id)
+                    transport_mode_dict[transport_mode_public_id] = transport_mode_obj.get_sidermit_transport_mode()
 
-            if default_route['type'] == 'Feeder':
-                route_tuple.append((network_obj.get_feeder_routes(transport_mode_dict[transport_mode_public_id]),
-                                    transport_mode_public_id))
-            elif default_route['type'] == 'Circular':
-                route_tuple.append((network_obj.get_circular_routes(transport_mode_dict[transport_mode_public_id]),
-                                    transport_mode_public_id))
-            elif default_route['type'] == 'Radial':
-                route_tuple.append((network_obj.get_radial_routes(transport_mode_dict[transport_mode_public_id],
-                                                                  short=default_route['extension'],
-                                                                  express=default_route['odExclusive']),
-                                    transport_mode_public_id))
-            elif default_route['type'] == 'Diametral':
-                route_tuple.append((network_obj.get_diametral_routes(transport_mode_dict[transport_mode_public_id],
-                                                                     jump=default_route['zoneJumps'],
-                                                                     short=default_route['extension'],
-                                                                     express=default_route['odExclusive']),
-                                    transport_mode_public_id))
-            elif default_route['type'] == 'Tangential':
-                route_tuple.append((network_obj.get_tangencial_routes(transport_mode_dict[transport_mode_public_id],
-                                                                      jump=default_route['zoneJumps'],
+                if default_route['type'] == 'Feeder':
+                    route_tuple.append((network_obj.get_feeder_routes(transport_mode_dict[transport_mode_public_id]),
+                                        transport_mode_public_id))
+                elif default_route['type'] == 'Circular':
+                    route_tuple.append((network_obj.get_circular_routes(transport_mode_dict[transport_mode_public_id]),
+                                        transport_mode_public_id))
+                elif default_route['type'] == 'Radial':
+                    route_tuple.append((network_obj.get_radial_routes(transport_mode_dict[transport_mode_public_id],
                                                                       short=default_route['extension'],
                                                                       express=default_route['odExclusive']),
-                                    transport_mode_public_id))
+                                        transport_mode_public_id))
+                elif default_route['type'] == 'Diametral':
+                    route_tuple.append((network_obj.get_diametral_routes(transport_mode_dict[transport_mode_public_id],
+                                                                         jump=default_route['zoneJumps'],
+                                                                         short=default_route['extension'],
+                                                                         express=default_route['odExclusive']),
+                                        transport_mode_public_id))
+                elif default_route['type'] == 'Tangential':
+                    route_tuple.append((network_obj.get_tangencial_routes(transport_mode_dict[transport_mode_public_id],
+                                                                          jump=default_route['zoneJumps'],
+                                                                          short=default_route['extension'],
+                                                                          express=default_route['odExclusive']),
+                                        transport_mode_public_id))
+                else:
+                    raise ParseError('type "{0}" is not valid.'.format(default_route['type']))
 
-            for (routes, transport_mode_public_id) in route_tuple:
-                for route in routes:
-                    all_routes.append(
-                        dict(name=route.id, transport_mode_public_id=transport_mode_public_id,
-                             nodes_sequence_i=','.join(str(x) for x in route.nodes_sequence_i),
-                             nodes_sequence_r=','.join(str(x) for x in route.nodes_sequence_r),
-                             stops_sequence_i=','.join(str(x) for x in route.stops_sequence_i),
-                             stops_sequence_r=','.join(str(x) for x in route.stops_sequence_r),
-                             type=route._type.value))
+                for (routes, transport_mode_public_id) in route_tuple:
+                    for route in routes:
+                        all_routes.append(
+                            dict(name=route.id, transport_mode_public_id=transport_mode_public_id,
+                                 nodes_sequence_i=','.join(str(x) for x in route.nodes_sequence_i),
+                                 nodes_sequence_r=','.join(str(x) for x in route.nodes_sequence_r),
+                                 stops_sequence_i=','.join(str(x) for x in route.stops_sequence_i),
+                                 stops_sequence_r=','.join(str(x) for x in route.stops_sequence_r),
+                                 type=route._type.value))
+        except SIDERMITException as e:
+            raise ParseError(e)
+        except TransportMode.DoesNotExist:
+            raise ParseError('Transport mode does not exist')
 
         return Response(all_routes, status.HTTP_200_OK)
 
