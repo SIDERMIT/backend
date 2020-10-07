@@ -111,7 +111,7 @@ def optimize_transport_network(transport_network_public_id):
             transport_network_obj.optimization_duration = timezone.now() - start_time
             transport_network_obj.optimization_error_message = None
             transport_network_obj.save()
-    except SIDERMITException as e:
+    except (SIDERMITException, Exception) as e:
         transport_network_obj.optimization_status = TransportNetwork.STATUS_ERROR
         transport_network_obj.optimization_duration = timezone.now() - start_time
         transport_network_obj.optimization_error_message = str(e)
