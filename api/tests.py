@@ -465,7 +465,11 @@ class CityAPITest(BaseTestCase):
                     {"id": 8, "source": 4, "target": 3},
                     {"id": 9, "source": 4, "target": 0},
                     {"id": 10, "source": 0, "target": 4}
-                ]}
+                ]},
+            'n': 2,
+            'l': 3.0,
+            'p': 1.0,
+            'g': 0.20000000000000004
         }
         self.assertDictEqual(expected_answer, json_response)
 
