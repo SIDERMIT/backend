@@ -279,7 +279,7 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
                              nodes_sequence_r=','.join(str(x) for x in route.nodes_sequence_r),
                              stops_sequence_i=','.join(str(x) for x in route.stops_sequence_i),
                              stops_sequence_r=','.join(str(x) for x in route.stops_sequence_r),
-                             type=route._type.value))
+                             type=3 if route._type.value == 3 else 1))
         except SIDERMITException as e:
             raise ParseError(e)
         except TransportMode.DoesNotExist:

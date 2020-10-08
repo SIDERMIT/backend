@@ -12,7 +12,7 @@ from storage.models import TransportNetwork, OptimizationResult, OptimizationRes
 logger = logging.getLogger(__name__)
 
 
-@job(settings.OPTIMIZER_QUEUE_NAME)
+@job(settings.OPTIMIZER_QUEUE_NAME, timeout=60 * 60 * 24 * 3)
 def optimize_transport_network(transport_network_public_id):
     start_time = timezone.now()
     transport_network_obj = TransportNetwork.objects.select_related('scene__city', 'scene__passenger').get(

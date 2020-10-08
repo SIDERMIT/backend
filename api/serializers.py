@@ -50,6 +50,10 @@ class TransportModeSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     transport_mode = TransportModeSerializer(many=False, read_only=True)
     transport_mode_public_id = serializers.UUIDField(source='transport_mode.public_id')
+    nodes_sequence_i = serializers.CharField(allow_blank=True)
+    stops_sequence_i = serializers.CharField(allow_blank=True)
+    nodes_sequence_r = serializers.CharField(allow_blank=True)
+    stops_sequence_r = serializers.CharField(allow_blank=True)
 
     class Meta:
         model = Route

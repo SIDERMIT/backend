@@ -115,8 +115,8 @@ class Route(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     public_id = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=50)
-    nodes_sequence_i = models.CharField(max_length=50)
-    stops_sequence_i = models.CharField(max_length=50)
+    nodes_sequence_i = models.CharField(max_length=50, null=True)
+    stops_sequence_i = models.CharField(max_length=50, null=True)
     nodes_sequence_r = models.CharField(max_length=50, null=True)
     stops_sequence_r = models.CharField(max_length=50, null=True)
     CUSTOM = 1
