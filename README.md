@@ -52,7 +52,12 @@ DB_HOST=localhost
 DB_PORT=5432
 
 # Redis location to connect to it. For instance redis://127.0.0.1:6379 
-REDIS_LOCATION=
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+CORS_ORIGIN_WHITELIST=http://localhost:8080
+
+LOG_PATH=test.log
 ```
 
 ## Test
