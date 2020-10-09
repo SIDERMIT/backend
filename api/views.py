@@ -299,12 +299,13 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
                                                          TransportNetwork.STATUS_PROCESSING]:
             raise ValidationError("Transport network is queued or processing at this moment")
 
+        transport_network_obj.optimization_status = TransportNetwork.STATUS_QUEUED
+        transport_network_obj.save()
+
         # async task
         job = optimize_transport_network.delay(transport_network_obj.public_id)
 
-        transport_network_obj.optimization_status = TransportNetwork.STATUS_QUEUED
-        transport_network_obj.job_id = job.id
-        transport_network_obj.save()
+        TransportNetwork.objects.filter(public_id=transport_network_obj.public_id).update(job_id=job.id)
 
         return Response(TransportNetworkSerializer(transport_network_obj).data, status.HTTP_201_CREATED)
 

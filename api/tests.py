@@ -1022,7 +1022,7 @@ class OptimizationActionTest(BaseTestCase):
                                  nodes_sequence_r=','.join([str(x) for x in route.nodes_sequence_r]),
                                  stops_sequence_r=','.join([str(x) for x in route.stops_sequence_r]))
 
-        with self.assertNumQueries(169):
+        with self.assertNumQueries(159):
             json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)

@@ -46,14 +46,14 @@ def optimize_transport_network(transport_network_public_id):
             transport_network=transport_network_obj,
             defaults=dict(vrc=ov_results['VRC'], co=ov_results['operators_cost'], ci=ov_results['infrastructure_cost'],
                           cu=ov_results['users_cost'], tv=ov_results['travel_time_on_board'],
-                          tw=ov_results['waiting time'], ta=ov_results['access_time'], t=ov_results['transfers']))
+                          tw=ov_results['waiting_time'], ta=ov_results['access_time'], t=ov_results['transfers']))
         if not created:
             opt_result_obj.vrc = ov_results['VRC']
             opt_result_obj.co = ov_results['operators_cost']
             opt_result_obj.ci = ov_results['infrastructure_cost']
             opt_result_obj.cu = ov_results['users_cost']
             opt_result_obj.tv = ov_results['travel_time_on_board']
-            opt_result_obj.tw = ov_results['waiting time']
+            opt_result_obj.tw = ov_results['waiting_time']
             opt_result_obj.ta = ov_results['access_time']
             opt_result_obj.t = ov_results['transfers']
             opt_result_obj.save()
@@ -107,10 +107,10 @@ def optimize_transport_network(transport_network_public_id):
                                                                 origin_node=node_i, destination_node=node_j,
                                                                 lambda_value=charge_ij)
 
-            transport_network_obj.optimization_status = TransportNetwork.STATUS_FINISHED
-            transport_network_obj.optimization_duration = timezone.now() - start_time
-            transport_network_obj.optimization_error_message = None
-            transport_network_obj.save()
+        transport_network_obj.optimization_status = TransportNetwork.STATUS_FINISHED
+        transport_network_obj.optimization_duration = timezone.now() - start_time
+        transport_network_obj.optimization_error_message = None
+        transport_network_obj.save()
     except (SIDERMITException, Exception) as e:
         transport_network_obj.optimization_status = TransportNetwork.STATUS_ERROR
         transport_network_obj.optimization_duration = timezone.now() - start_time
