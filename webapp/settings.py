@@ -182,10 +182,13 @@ RQ_QUEUES[OPTIMIZER_QUEUE_NAME] = {
 # Add link for django-rq queues to admin panel
 RQ_SHOW_ADMIN_LINK = True
 
+REDIS_HOST = config('REDIS_HOST')
+REDIS_PORT = config('REDIS_PORT')
+
 CACHES = {
     'default': {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "{0}/1".format(config('REDIS_LOCATION')),
+        "LOCATION": "redis://{0}:{1}/1".format(REDIS_HOST, REDIS_PORT),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         }

@@ -105,6 +105,9 @@ class TransportNetwork(models.Model):
     optimization_error_message = models.TextField(default=None, null=True)
     optimization_duration = models.DurationField(default=None, null=True)
 
+    job_id = models.UUIDField(null=True)
+    # job identifier
+
     def get_sidermit_network(self, city_graph):
         return SidermitTransportNetwork(city_graph)
 
