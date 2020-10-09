@@ -317,8 +317,8 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
 
         # rq connection
         queue_name = settings.OPTIMIZER_QUEUE_NAME
-        host = settings.RQ_QUEUES[queue_name]['HOST']
-        port = settings.RQ_QUEUES[queue_name]['PORT']
+        host = settings.REDIS_HOST
+        port = settings.REDIS_PORT
         with Connection(Redis(host, port)) as redis_conn:
             job = KillJob.fetch(str(transport_network_obj.job_id), connection=redis_conn)
             job.kill()
