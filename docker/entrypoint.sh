@@ -13,27 +13,14 @@ wait_for_port()
   done
 }
 
-# if image is running on aws environment (fargate)
-if [ -n "$ECS_CONTAINER_METADATA_URI_V4" ];
-then
-  wait_for_port "redis" "127.0.0.1" "6379"
-  wait_for_port "postgres" "$DB_HOST" "5432"
-else
-  wait_for_port "redis" "cache" "6379"
-  wait_for_port "postgres" "db" "5432"
-fi
+#wait_for_port "postgres" "db" "5432"
+#wait_for_port "redis" "cache" "6379"
 
 case "$1" in
   webserver)
     echo "starting webserver"
     python manage.py migrate
     python manage.py collectstatic --no-input
-
-    # if variable is not empty string
-    if [ -n "$SU_DJANGO_USERNAME" ];
-    then
-      echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$SU_DJANGO_USERNAME', 'a@b.com', '$SU_DJANGO_PASS') if not User.objects.filter(username='$SU_DJANGO_USERNAME').exists() else None;" | python manage.py shell
-    fi
 
     gunicorn --chdir webapp --access-logfile - --bind :8000 webapp.wsgi:application -t 1200
   ;;

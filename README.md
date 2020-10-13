@@ -92,7 +92,7 @@ docker push sidermit/webapp:latest
 
 ```
 # build nginx server
-docker build -f docker\nginx\NginxDockerfile -t nginx-webapp:latest .
+docker build --no-cache -f docker\nginx\NginxDockerfile -t nginx-webapp:latest .
 
 # create tag
 docker tag nginx-webapp:latest sidermit/nginx-webapp:latest

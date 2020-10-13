@@ -1,9 +1,9 @@
-FROM python:3.7.7-alpine3.11 as base
+FROM python:3.7.9 as base
 
 FROM base as builder
 
 RUN mkdir /install
-RUN /bin/sh -c 'apk update && apk add --no-cache postgresql-dev gcc musl-dev geos-dev'
+RUN /bin/sh -c 'apt-get update'
 COPY requirements.txt /install/requirements.txt
 RUN /bin/sh -c 'pip3 install --no-cache-dir --upgrade pip'
 RUN /bin/sh -c 'pip3 install --no-warn-script-location --no-cache-dir --prefix /install -r /install/requirements.txt'
@@ -16,8 +16,6 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 COPY --from=builder /install /usr/local
-
-RUN /bin/sh -c 'apk update && apk add --no-cache postgresql-dev'
 
 WORKDIR /app
 RUN mkdir /app/staticfiles

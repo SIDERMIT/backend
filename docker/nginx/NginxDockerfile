@@ -1,5 +1,12 @@
+FROM node:9.11.1-alpine as frontend-stage
+WORKDIR /code
+RUN apk add --update openssl
+RUN wget https://github.com/SIDERMIT/frontend/archive/v0.0.8.tar.gz && \
+tar -xvf v0.0.8.tar.gz
+
 FROM nginx:1.17
 
+COPY --from=frontend-stage /code/frontend-0.0.8/dist /usr/share/nginx/html
 COPY ./docker/nginx/config/local.conf /etc/nginx/conf.d/local.conf
 COPY ./docker/nginx/config/status.conf /etc/nginx/conf.d/status.conf
 COPY ./docker/nginx/nginx_entrypoint.sh ./nginx_entrypoint.sh
@@ -7,7 +14,5 @@ COPY ./docker/nginx/nginx_entrypoint.sh ./nginx_entrypoint.sh
 RUN apt-get --assume-yes update
 
 RUN rm /etc/nginx/conf.d/default.conf
-
-WORKDIR .
 
 ENTRYPOINT ["/bin/bash", "nginx_entrypoint.sh"]
