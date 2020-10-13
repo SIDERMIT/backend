@@ -302,10 +302,6 @@ class CityAPITest(BaseTestCase):
         with self.assertNumQueries(5):
             json_response = self.cities_list(self.client, dict())
 
-        print(json_response[0])
-        print(CitySerializer(self.city_obj).data)
-
-        self.maxDiff = True
         self.assertEqual(len(json_response), 1)
         self.assertDictEqual(json_response[0], CitySerializer(self.city_obj).data)
 
@@ -357,10 +353,22 @@ class CityAPITest(BaseTestCase):
         self.assertIn('number of lines', json_response['non_field_errors'][0])
         self.assertEqual(City.objects.count(), 1)
 
-    def test_update_city_step_1(self):
+    def test_update_city_with_scenes_is_not_valid(self):
         new_city_name = 'name2'
         new_data = dict(name=new_city_name, graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
-        with self.assertNumQueries(10):
+        with self.assertNumQueries(5):
+            json_response = self.cities_update(self.client, self.city_obj.public_id, new_data,
+                                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(json_response[0],
+                         "City \"{0}\" can not be modified because has scenes.".format(self.city_obj.name))
+
+    def test_update_city_step_1(self):
+        Scene.objects.all().delete()
+
+        new_city_name = 'name2'
+        new_data = dict(name=new_city_name, graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
+        with self.assertNumQueries(4):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
@@ -368,17 +376,21 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(self.city_obj.name, new_city_name)
 
     def test_partial_update_city_step2(self):
+        Scene.objects.all().delete()
+
         new_data = dict(demand_matrix=[[1, 1], [1, 1]], y=1, a=1, alpha=0.1, beta=0.2, step=CitySerializer.STEP_2)
-        with self.assertNumQueries(11):
+        with self.assertNumQueries(5):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
 
     def test_partial_update_city(self):
+        Scene.objects.all().delete()
+
         new_city_name = 'name2'
         new_data = dict(name=new_city_name)
-        with self.assertNumQueries(10):
+        with self.assertNumQueries(4):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
@@ -996,7 +1008,7 @@ class OptimizationActionTest(BaseTestCase):
         self.transport_network_obj = TransportNetwork.objects.first()
 
     def test_run_optimization_with_wrong_data(self):
-        with self.assertNumQueries(8):
+        with self.assertNumQueries(9):
             json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)

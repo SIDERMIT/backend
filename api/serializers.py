@@ -331,6 +331,14 @@ class CitySerializer(BaseCitySerializer):
 
         return validated_data
 
+    def update(self, instance, validated_data):
+
+        if instance.scene_set.count():
+            raise serializers.ValidationError(
+                'City "{0}" can not be modified because has scenes.'.format(instance.name))
+
+        return super().update(instance, validated_data)
+
     def create(self, validated_data):
         validated_data.pop('step')
         return super().create(validated_data)
