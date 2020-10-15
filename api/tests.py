@@ -72,13 +72,14 @@ class BaseTestCase(TestCase):
             for j in range(scene_number):
                 scene_obj = Scene.objects.create(name='s{0}-{1}'.format(i, j), city=city_obj)
                 if passenger:
-                    Passenger.objects.create(va=1, pv=1, pw=1, pa=1, pt=1, spv=1, spw=1, spa=1, spt=1, scene=scene_obj)
+                    Passenger.objects.create(va=4, pv=1, pw=2, pa=3, pt=8, spv=1, spw=2, spa=3, spt=8, scene=scene_obj)
 
                 transport_mode_obj_list = []
                 for k in range(transport_mode_number):
                     transport_mode_obj = TransportMode.objects.create(name='tm-{0}-{1}-{2}'.format(i, j, k), bya=1,
-                                                                      co=1, c1=1, c2=1, v=1, t=1, fmax=150, kmax=100,
-                                                                      theta=1, tat=1, d=4, fini=1, scene=scene_obj)
+                                                                      co=8.61, c1=0.15, c2=0, v=20, t=2.5, fmax=150,
+                                                                      kmax=160, theta=0.7, tat=0, d=4, fini=28,
+                                                                      scene=scene_obj)
                     transport_mode_obj_list.append(transport_mode_obj)
 
                 for p in range(transport_network_number):
@@ -600,7 +601,7 @@ class SceneAPITest(BaseTestCase):
                                    fini=1)
         new_data = dict(name=new_scene_name, city_public_id=self.city_obj.public_id, passenger=passenger_data,
                         transportmode_set=[transport_mode_data])
-        with self.assertNumQueries(10):
+        with self.assertNumQueries(11):
             json_response = self.scenes_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -610,7 +611,7 @@ class SceneAPITest(BaseTestCase):
     def test_partial_update_scene(self):
         new_scene_name = 'name2'
         new_data = dict(name=new_scene_name, passenger=dict())
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
@@ -642,7 +643,7 @@ class SceneAPITest(BaseTestCase):
     def test_update_passenger(self):
         passenger_data = dict(va=3, pv=3, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
         scene_data = dict(passenger=passenger_data)
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
                                                        status_code=status.HTTP_200_OK)
 
@@ -653,7 +654,7 @@ class SceneAPITest(BaseTestCase):
         passenger_data = dict(va=3)
         scene_data = dict(passenger=passenger_data)
 
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(10):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
                                                        status_code=status.HTTP_200_OK)
         self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
@@ -976,7 +977,9 @@ class TransportNetworkAPITest(BaseTestCase):
         with self.assertNumQueries(6):
             json_response = self.transport_network_results(self.client, self.transport_network_obj.public_id)
 
-        self.assertDictEqual(json_response, dict(opt_result=[], opt_result_per_route=[]))
+        self.assertDictEqual(json_response,
+                             dict(opt_result=TransportNetworkOptimizationSerializer(self.transport_network_obj).data,
+                                  opt_result_per_route=[]))
 
 
 class RecentOptimizationsAPITest(BaseTestCase):
@@ -1016,7 +1019,6 @@ class OptimizationActionTest(BaseTestCase):
         self.assertIsNone(json_response['optimization_ran_at'])
 
     def test_run_optimization_with_correct_data(self):
-        # TODO: check with Felive Vera
         graph = self.transport_network_obj.scene.city.get_sidermit_graph()
         network_obj = self.transport_network_obj.get_sidermit_network(graph)
         # add feeder routes
@@ -1024,8 +1026,8 @@ class OptimizationActionTest(BaseTestCase):
         sidermit_transport_mode_obj = transport_mode_obj.get_sidermit_transport_mode()
         routes = network_obj.get_feeder_routes(sidermit_transport_mode_obj) + \
                  network_obj.get_radial_routes(sidermit_transport_mode_obj, short=False, express=False) + \
-                 network_obj.get_diametral_routes(sidermit_transport_mode_obj, short=False, express=False, jump=1)
-        #        network_obj.get_circular_routes(sidermit_transport_mode_obj)
+                 network_obj.get_diametral_routes(sidermit_transport_mode_obj, short=False, express=False, jump=1) + \
+                 network_obj.get_circular_routes(sidermit_transport_mode_obj)
 
         for route in routes:
             Route.objects.create(transport_network=self.transport_network_obj, transport_mode=transport_mode_obj,
@@ -1035,7 +1037,7 @@ class OptimizationActionTest(BaseTestCase):
                                  nodes_sequence_r=','.join([str(x) for x in route.nodes_sequence_r]),
                                  stops_sequence_r=','.join([str(x) for x in route.stops_sequence_r]))
 
-        with self.assertNumQueries(159):
+        with self.assertNumQueries(181):
             json_response = self.run_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertEqual(json_response['optimization_status'], TransportNetwork.STATUS_QUEUED)
