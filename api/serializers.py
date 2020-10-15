@@ -4,7 +4,7 @@ from django.db import transaction, IntegrityError
 from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
-from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode
+from sidermit.publictransportsystem import TransportMode as SIDERMITTransportMode, Passenger as SIDERMITPassenger
 
 from api.utils import get_network_descriptor
 from storage.models import City, Scene, Passenger, TransportMode, OptimizationResultPerMode, OptimizationResult, \
@@ -14,6 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class PassengerSerializer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        try:
+            SIDERMITPassenger(**attrs)
+        except (SIDERMITException, TypeError) as e:
+            raise serializers.ValidationError(e)
+
+        return attrs
+
     class Meta:
         model = Passenger
         fields = ('va', 'pv', 'pw', 'pa', 'pt', 'spv', 'spw', 'spa', 'spt')
@@ -118,6 +127,12 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
         route_set = validated_data.pop('route_set')
 
         with transaction.atomic():
+            # check if has results
+            if instance.optimization_status == TransportNetwork.STATUS_FINISHED:
+                raise serializers.ValidationError(
+                    'Transport network "{0}" can not be modified because has optimization results.'.format(
+                        instance.name))
+
             # update attributes of transport network
             for key in validated_data:
                 setattr(instance, key, validated_data.get(key))
@@ -252,6 +267,9 @@ class SceneSerializer(serializers.ModelSerializer):
         city_obj = validated_data.pop('city_public_id')
         transport_mode_set = validated_data.pop('transportmode_set')
         passenger_data = validated_data.pop('passenger')
+
+        PassengerSerializer(data=passenger_data).is_valid(raise_exception=True)
+
         scene_obj = Scene.objects.create(city=city_obj, **validated_data)
         Passenger.objects.create(scene=scene_obj, **passenger_data)
         transport_mode_list = []
@@ -262,7 +280,11 @@ class SceneSerializer(serializers.ModelSerializer):
         return scene_obj
 
     def update(self, instance, validated_data):
-        # we do not update passenger data
+        # check if update can be done
+        if instance.transportnetwork_set.filter(optimization_status=TransportNetwork.STATUS_FINISHED).exists():
+            raise serializers.ValidationError(
+                'Scene "{0}" can not be modified because have one or more networks with results'.format(instance.name))
+
         passenger_data = validated_data.pop('passenger')
         # update are made directly on transportmode api, so this field is not needed
         try:
