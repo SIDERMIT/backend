@@ -1,5 +1,6 @@
 import json
 import uuid
+from unittest import mock
 
 from django.test import TestCase
 from django.utils import timezone
@@ -1044,12 +1045,24 @@ class OptimizationActionTest(BaseTestCase):
         self.assertEqual(self.transport_network_obj.optimization_status, TransportNetwork.STATUS_FINISHED)
         self.assertIsNotNone(self.transport_network_obj.optimization_ran_at)
 
-    def test_cancel_optimization(self):
+    @mock.patch('api.views.Redis')
+    @mock.patch('api.views.Connection')
+    @mock.patch('api.views.KillJob')
+    def test_cancel_optimization(self, mock_killjob, mock_connection, mock_redis):
         with self.assertNumQueries(3):
             json_response = self.cancel_optimization(self.client, self.transport_network_obj.public_id)
 
         self.assertIsNone(json_response['optimization_status'])
         self.assertIsNone(json_response['optimization_ran_at'])
+
+        mock_redis.assert_called_once()
+        mock_connection.assert_called_once()
+        mock_killjob.fetch.assert_called_once()
+
+        self.transport_network_obj.refresh_from_db()
+        self.assertIsNone(self.transport_network_obj.optimization_status)
+        self.assertIsNone(self.transport_network_obj.optimization_ran_at)
+        self.assertIsNone(self.transport_network_obj.optimization_error_message)
 
 
 class ValidationAPITest(BaseTestCase):
