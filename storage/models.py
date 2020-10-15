@@ -167,6 +167,7 @@ class OptimizationResultPerRoute(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
     # optimization variables
     frequency = models.FloatField()
+    frequency_per_line = models.FloatField()
     k = models.FloatField()
     b = models.FloatField()
     tc = models.FloatField()

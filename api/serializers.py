@@ -412,7 +412,8 @@ class OptimizationResultPerRouteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OptimizationResultPerRoute
-        fields = ('route', 'frequency', 'k', 'b', 'tc', 'co', 'lambda_min', 'optimizationresultperroutedetail_set')
+        fields = ('route', 'frequency', 'frequency_per_line', 'k', 'b', 'tc', 'co', 'lambda_min',
+                  'optimizationresultperroutedetail_set')
 
 
 class RecentOptimizationSerializer(serializers.ModelSerializer):

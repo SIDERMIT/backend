@@ -82,18 +82,19 @@ def optimize_transport_network(transport_network_public_id):
             route_obj = Route.objects.get(transport_network=transport_network_obj, name=route_name)
             opt_result_per_route_obj, _ = OptimizationResultPerRoute.objects.get_or_create(
                 transport_network=transport_network_obj, route=route_obj,
-                defaults=dict(frequency=route[1], k=route[2], b=route[3], tc=route[4], co=route[5],
-                              lambda_min=route[6]))
+                defaults=dict(frequency=route[1], frequency_per_line=route[2], k=route[3], b=route[4], tc=route[5],
+                              co=route[6], lambda_min=route[7]))
             opt_result_per_route_obj.frequency = route[1]
-            opt_result_per_route_obj.k = route[2]
-            opt_result_per_route_obj.b = route[3]
-            opt_result_per_route_obj.tc = route[4]
-            opt_result_per_route_obj.co = route[5]
-            opt_result_per_route_obj.lambda_min = route[6]
+            opt_result_per_route_obj.frequency_per_line = route[2]
+            opt_result_per_route_obj.k = route[3]
+            opt_result_per_route_obj.b = route[4]
+            opt_result_per_route_obj.tc = route[5]
+            opt_result_per_route_obj.co = route[6]
+            opt_result_per_route_obj.lambda_min = route[7]
             opt_result_per_route_obj.save()
 
-            sub_table_i = route[7]
-            sub_table_r = route[8]
+            sub_table_i = route[8]
+            sub_table_r = route[9]
 
             OptimizationResultPerRouteDetail.objects.filter(opt_route=opt_result_per_route_obj).delete()
             for node_i, node_j, charge_ij in sub_table_i:
