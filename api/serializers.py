@@ -1,6 +1,6 @@
 import logging
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import serializers
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
@@ -35,7 +35,10 @@ class TransportModeSerializer(serializers.ModelSerializer):
         except Scene.DoesNotExist:
             raise serializers.ValidationError('Scene does not exist')
 
-        transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **validated_data)
+        try:
+            transport_mode_obj = TransportMode.objects.create(scene=scene_obj, **validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError('Name "{0}" can not be duplicated'.format(validated_data.get('name')))
 
         return transport_mode_obj
 
