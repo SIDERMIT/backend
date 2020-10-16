@@ -957,7 +957,8 @@ class TransportNetworkAPITest(BaseTestCase):
 
         route_obj = Route.objects.first()
         opt_result_per_route_obj = OptimizationResultPerRoute.objects.create(
-            transport_network=transport_network_obj, route=route_obj, frequency=1, k=1, b=1, tc=1, co=1, lambda_min=1)
+            transport_network=transport_network_obj, route=route_obj, frequency=1, frequency_per_line=1, k=1, b=1, tc=1,
+            co=1, lambda_min=1)
         OptimizationResultPerRouteDetail.objects.create(
             opt_route=opt_result_per_route_obj, direction=OptimizationResultPerRouteDetail.DIRECTION_I,
             origin_node=1, destination_node=2, lambda_value=1)
