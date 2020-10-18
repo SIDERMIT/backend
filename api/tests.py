@@ -171,12 +171,6 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.PUT_REQUEST, url, data, status_code, format='json')
 
-    def scenes_partial_update(self, client, public_id, fields, status_code=status.HTTP_200_OK):
-        url = reverse('scenes-detail', kwargs=dict(public_id=public_id))
-        data = fields
-
-        return self._make_request(client, self.PATCH_REQUEST, url, data, status_code, format='json')
-
     def scenes_delete(self, client, public_id, status_code=status.HTTP_204_NO_CONTENT):
         url = reverse('scenes-detail', kwargs=dict(public_id=public_id))
         data = dict()
@@ -595,7 +589,7 @@ class SceneAPITest(BaseTestCase):
 
     def test_update_scene(self):
         new_scene_name = 'name2'
-        passenger_data = dict(va=0, pv=0, pw=0, pa=0, pt=0, spv=0, spw=0, spa=0, spt=0)
+        passenger_data = dict(va=1, pv=0, pw=0, pa=0, pt=0, spv=0, spw=0, spa=0, spt=0)
         # transport mode data is not needed on update because this has to be done in transport mode api directly
         transport_mode_data = dict(name='nam', bya=1, co=1, c1=1, c2=1, v=1, t=1, fmax=1, kmax=1, theta=1, tat=1, d=1,
                                    fini=1)
@@ -603,16 +597,6 @@ class SceneAPITest(BaseTestCase):
                         transportmode_set=[transport_mode_data])
         with self.assertNumQueries(11):
             json_response = self.scenes_update(self.client, self.scene_obj.public_id, new_data)
-
-        self.scene_obj.refresh_from_db()
-        self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
-        self.assertEqual(self.scene_obj.name, new_scene_name)
-
-    def test_partial_update_scene(self):
-        new_scene_name = 'name2'
-        new_data = dict(name=new_scene_name, passenger=dict())
-        with self.assertNumQueries(10):
-            json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, new_data)
 
         self.scene_obj.refresh_from_db()
         self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
@@ -647,16 +631,6 @@ class SceneAPITest(BaseTestCase):
             json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
                                                        status_code=status.HTTP_200_OK)
 
-        self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
-        self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
-
-    def test_partial_update_passenger(self):
-        passenger_data = dict(va=3)
-        scene_data = dict(passenger=passenger_data)
-
-        with self.assertNumQueries(10):
-            json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
-                                                       status_code=status.HTTP_200_OK)
         self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
         self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
 
