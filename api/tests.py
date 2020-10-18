@@ -63,7 +63,7 @@ class BaseTestCase(TestCase):
             for i in range(size):
                 row = []
                 for j in range(size):
-                    row.append(demand_matrix[i][j])
+                    row.append(round(demand_matrix[i][j], 2))
                 demand_matrix_data.append(row)
 
             city_obj = City.objects.create(name=name, graph=graph_obj.export_graph(GraphContentFormat.PAJEK),
