@@ -626,12 +626,16 @@ class SceneAPITest(BaseTestCase):
 
     def test_update_passenger(self):
         passenger_data = dict(va=3, pv=3, pw=2, pa=2, pt=2, spv=2, spw=2, spa=2, spt=2)
-        scene_data = dict(passenger=passenger_data)
-        with self.assertNumQueries(10):
-            json_response = self.scenes_partial_update(self.client, self.scene_obj.public_id, scene_data,
-                                                       status_code=status.HTTP_200_OK)
+        transport_mode_data = dict(name='nam', bya=1, co=1, c1=1, c2=1, v=1, t=1, fmax=1, kmax=1, theta=1, tat=1, d=1,
+                                   fini=1)
+        scene_data = dict(passenger=passenger_data, name='new name', transportmode_set=[transport_mode_data],
+                          city_public_id=self.city_obj.public_id)
+        with self.assertNumQueries(11):
+            json_response = self.scenes_update(self.client, self.scene_obj.public_id, scene_data,
+                                               status_code=status.HTTP_200_OK)
 
         self.assertEqual(json_response['passenger']['va'], passenger_data['va'])
+        self.scene_obj.refresh_from_db()
         self.assertDictEqual(json_response, SceneSerializer(self.scene_obj).data)
 
     def test_get_global_result(self):
