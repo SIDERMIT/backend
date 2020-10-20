@@ -320,14 +320,20 @@ class CityAPITest(BaseTestCase):
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
 
     def test_create_city_graph(self):
-        fields = dict(name='city name', graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
+        n = 1
+        p = 1
+        l = 1
+        g = 1
+        graph = Graph.build_from_parameters(n, l, g, p).export_graph(GraphContentFormat.PAJEK)
+        fields = dict(name='city name', graph=graph, n=n, p=p, l=l, g=g, step=CitySerializer.STEP_1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
         self.assertEqual(City.objects.count(), 2)
 
     def test_create_city_graph_with_parameters(self):
-        fields = dict(name='city name', n=1, p=1, l=1, g=1, graph='pajek content', step=CitySerializer.STEP_1)
+        graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
+        fields = dict(name='city name', n=4, p=1, l=1, g=1, graph=graph_content, step=CitySerializer.STEP_1)
         with self.assertNumQueries(2):
             self.cities_create(self.client, fields)
 
@@ -351,7 +357,8 @@ class CityAPITest(BaseTestCase):
 
     def test_update_city_with_scenes_is_not_valid(self):
         new_city_name = 'name2'
-        new_data = dict(name=new_city_name, graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
+        graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
+        new_data = dict(name=new_city_name, graph=graph_content, n=4, p=1, l=1, g=1, step=CitySerializer.STEP_1)
         with self.assertNumQueries(5):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data,
                                                status_code=status.HTTP_400_BAD_REQUEST)
@@ -363,7 +370,8 @@ class CityAPITest(BaseTestCase):
         Scene.objects.all().delete()
 
         new_city_name = 'name2'
-        new_data = dict(name=new_city_name, graph='nodes 2', n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
+        graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
+        new_data = dict(name=new_city_name, graph=graph_content, n=1, p=1, l=1, g=1, step=CitySerializer.STEP_1)
         with self.assertNumQueries(4):
             json_response = self.cities_update(self.client, self.city_obj.public_id, new_data)
 
@@ -374,7 +382,8 @@ class CityAPITest(BaseTestCase):
     def test_partial_update_city_step2(self):
         Scene.objects.all().delete()
 
-        new_data = dict(demand_matrix=[[1, 1], [1, 1]], y=1, a=1, alpha=0.1, beta=0.2, step=CitySerializer.STEP_2)
+        new_data = dict(demand_matrix=self.city_obj.demand_matrix, y=1, a=1, alpha=0.1, beta=0.2,
+                        step=CitySerializer.STEP_2)
         with self.assertNumQueries(5):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
@@ -385,13 +394,18 @@ class CityAPITest(BaseTestCase):
         Scene.objects.all().delete()
 
         new_city_name = 'name2'
-        new_data = dict(name=new_city_name)
+        new_data = dict(name=new_city_name, n=7)
         with self.assertNumQueries(4):
             json_response = self.cities_partial_update(self.client, self.city_obj.public_id, new_data)
 
         self.city_obj.refresh_from_db()
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
         self.assertEqual(self.city_obj.name, new_city_name)
+        self.assertIsNone(self.city_obj.demand_matrix)
+        self.assertIsNone(self.city_obj.y)
+        self.assertIsNone(self.city_obj.a)
+        self.assertIsNone(self.city_obj.alpha)
+        self.assertIsNone(self.city_obj.beta)
 
     def test_delete_city(self):
         with self.assertNumQueries(11):

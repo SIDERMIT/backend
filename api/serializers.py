@@ -316,16 +316,12 @@ class CitySerializer(BaseCitySerializer):
                 key_exists.append(validated_data.get(key) is None)
 
             try:
-                if all(key_exists):
-                    # if all keys are none, there are not parameters but graph has to exist
-                    Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
-                else:
-                    # all parameters has to exist and the graph result has to match with parameters
-                    if validated_data['graph'] != Graph.build_from_parameters(validated_data.get('n'),
-                                                                              validated_data.get('l'),
-                                                                              validated_data.get('g'),
-                                                                              validated_data.get('p')):
-                        serializers.ValidationError('Graph description does not match with parameters')
+                if not all(key_exists):
+                    # if all keys are not none, there are not parameters but graph has to exist
+                    Graph.build_from_parameters(validated_data.get('n'), validated_data.get('l'),
+                                                validated_data.get('g'), validated_data.get('p'))
+
+                Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
             except SIDERMITException as e:
                 raise serializers.ValidationError(e)
 
@@ -339,18 +335,12 @@ class CitySerializer(BaseCitySerializer):
                 public_id = self.context['view'].kwargs['public_id']
                 graph_obj = Graph.build_from_content(City.objects.only('graph').get(public_id=public_id).graph,
                                                      GraphContentFormat.PAJEK)
-                if all(key_exists):
-                    # if all keys are none, there are not parameters but graph has to exist
+                if not all(key_exists):
+                    # if all keys are not none, check values
                     Demand.build_from_parameters(graph_obj, validated_data.get('y'), validated_data.get('a'),
                                                  validated_data.get('alpha'), validated_data.get('beta'))
-                else:
-                    # all parameters has to exist and the graph result has to match with parameters
-                    if validated_data['demand_matrix'] != Demand.build_from_parameters(graph_obj,
-                                                                                       validated_data.get('y'),
-                                                                                       validated_data.get('a'),
-                                                                                       validated_data.get('alpha'),
-                                                                                       validated_data.get('beta')):
-                        serializers.ValidationError('Graph description does not match with parameters')
+
+                Demand.build_from_content(graph_obj, validated_data['demand_matrix'])
             except SIDERMITException as e:
                 raise serializers.ValidationError(e)
 
@@ -361,6 +351,13 @@ class CitySerializer(BaseCitySerializer):
         if instance.scene_set.count():
             raise serializers.ValidationError(
                 'City "{0}" can not be modified because has scenes.'.format(instance.name))
+
+        if validated_data.get('n', None) is not None and instance.n != validated_data.get('n'):
+            validated_data['demand_matrix'] = None
+            validated_data['y'] = None
+            validated_data['a'] = None
+            validated_data['alpha'] = None
+            validated_data['beta'] = None
 
         return super().update(instance, validated_data)
 
