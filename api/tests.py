@@ -148,8 +148,13 @@ class BaseTestCase(TestCase):
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
-    def cities_build_matrix_file_action(self, client, public_id, data, status_code=status.HTTP_200_OK):
-        url = reverse('cities-build-matrix-file', kwargs=dict(public_id=public_id))
+    def cities_build_matrix_data_action(self, client, public_id, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-build-matrix-data', kwargs=dict(public_id=public_id))
+
+        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+
+    def cities_build_matrix_from_file_action(self, client, public_id, data, status_code=status.HTTP_200_OK):
+        url = reverse('cities-build-matrix-from-file', kwargs=dict(public_id=public_id))
 
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
@@ -515,10 +520,10 @@ class CityAPITest(BaseTestCase):
         self.assertIn('The number of lines in the file must be 2n+1 or file is very big (until 5000 zones accepted)',
                       json_response['detail'])
 
-    def test_build_matrix_file_city(self):
+    def test_build_matrix_data_city(self):
         data = dict(y=1, a=1.0, alpha=0.1, beta=0.8)
         with self.assertNumQueries(5):
-            json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, data)
+            json_response = self.cities_build_matrix_data_action(self.client, self.city_obj.public_id, data)
 
         expected_demand_matrix_file = [
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0],
@@ -536,13 +541,13 @@ class CityAPITest(BaseTestCase):
         self.assertDictEqual(json_response, dict(demand_matrix=expected_demand_matrix_file,
                                                  demand_matrix_header=excepted_demand_matrix_header))
 
-    def test_build_matrix_file_with_wrong_parameters_city(self):
+    def test_build_matrix_data_with_wrong_parameters_city(self):
         data = dict(y=1, a=1.0, alpha=0.4, beta=0.8)
         for index, key in enumerate(['y', 'a', 'alpha', 'beta']):
             new_data = data.copy()
             new_data[key] = 'asdasd'
             with self.assertNumQueries(0):
-                json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, new_data,
+                json_response = self.cities_build_matrix_data_action(self.client, self.city_obj.public_id, new_data,
                                                                      status_code=status.HTTP_400_BAD_REQUEST)
             if index == 0:
                 self.assertIn('invalid literal', json_response['detail'])
@@ -550,15 +555,60 @@ class CityAPITest(BaseTestCase):
                 self.assertIn('could not convert string to float', json_response['detail'])
 
         data['y'] = -1
-        json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, data,
+        json_response = self.cities_build_matrix_data_action(self.client, self.city_obj.public_id, data,
                                                              status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('y must be positive', json_response['detail'])
 
-    def test_build_matrix_file_without_parameters_city(self):
+    def test_build_matrix_data_without_parameters_city(self):
         with self.assertNumQueries(0):
-            json_response = self.cities_build_matrix_file_action(self.client, self.city_obj.public_id, dict(),
+            json_response = self.cities_build_matrix_data_action(self.client, self.city_obj.public_id, dict(),
                                                                  status_code=status.HTTP_400_BAD_REQUEST)
         self.assertIn('Parameter can not be empty', json_response['detail'])
+
+    def test_build_matrix_from_file_city(self):
+        file_content = ''',CBD,P_1,SC_1,P_2,SC_2,P_3,SC_3,P_4,SC_4
+CBD,1,2,3,0,0,0,0,0,0
+P_1,300,0,375,0,24.999999999999996,0,24.999999999999996,0,24.999999999999996
+SC_1,0,0,0,0,0,0,0,0,0
+P_2,300,0,24.999999999999996,0,375,0,24.999999999999996,0,24.999999999999996
+SC_2,0,0,0,0,0,0,0,0,0
+P_3,300,0,24.999999999999996,0,24.999999999999996,0,375,0,24.999999999999996
+SC_3,0,0,0,0,0,0,0,0,0
+P_4,300,0,24.999999999999996,0,24.999999999999996,0,24.999999999999996,0,375
+SC_4,0,0,0,0,0,0,0,0,0'''
+        data = dict(content=file_content)
+        with self.assertNumQueries(5):
+            json_response = self.cities_build_matrix_from_file_action(self.client, self.city_obj.public_id, data)
+
+        expected_demand_matrix_file = [
+            [1, 2, 3, 0, 0, 0, 0, 0, 0],
+            [300, 0, 375, 0, 24.999999999999996, 0, 24.999999999999996, 0, 24.999999999999996],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [300, 0, 24.999999999999996, 0, 375, 0, 24.999999999999996, 0, 24.999999999999996],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [300, 0, 24.999999999999996, 0, 24.999999999999996, 0, 375, 0, 24.999999999999996],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [300, 0, 24.999999999999996, 0, 24.999999999999996, 0, 24.999999999999996, 0, 375],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]
+        excepted_demand_matrix_header = ['CBD', 'P_1', 'SC_1', 'P_2', 'SC_2', 'P_3', 'SC_3', 'P_4', 'SC_4']
+        self.maxDiff = None
+        self.assertDictEqual(json_response, dict(demand_matrix=expected_demand_matrix_file,
+                                                 demand_matrix_header=excepted_demand_matrix_header))
+
+    def test_build_matrix_from_file_with_wrong_parameters_city(self):
+        for content in ['', 'asdasdasd', 'ads,1\nads,1\nads\nads\nads\nads\nads\nads\n']:
+            data = dict(content=content)
+            with self.assertNumQueries(5):
+                json_response = self.cities_build_matrix_from_file_action(self.client, self.city_obj.public_id, data,
+                                                                          status_code=status.HTTP_400_BAD_REQUEST)
+            self.assertIn('Matrix should have rows equal to number of nodes', json_response['detail'])
+
+    def test_build_matrix_from_file_without_parameters_city(self):
+        with self.assertNumQueries(5):
+            json_response = self.cities_build_matrix_from_file_action(self.client, self.city_obj.public_id, dict(),
+                                                                      status_code=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Matrix should have rows equal to number of nodes', json_response['detail'])
 
 
 class SceneAPITest(BaseTestCase):

@@ -96,7 +96,7 @@ class CityViewSet(viewsets.ModelViewSet):
                         status.HTTP_200_OK)
 
     @action(detail=True, methods=['GET'])
-    def build_matrix_file(self, request, public_id=None):
+    def build_matrix_data(self, request, public_id=None):
         try:
             y = int(request.query_params.get('y'))
             a = float(request.query_params.get('a'))
@@ -122,6 +122,38 @@ class CityViewSet(viewsets.ModelViewSet):
             raise ParseError(e)
         except TypeError:
             raise ParseError('Parameter can not be empty')
+
+        return Response({'demand_matrix': demand_matrix_data, 'demand_matrix_header': demand_matrix_header},
+                        status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def build_matrix_from_file(self, request, public_id=None):
+        try:
+            content = request.query_params.get('content', '')
+            matrix = []
+            rows = content.split('\n')[1:]
+            for row in rows:
+                matrix.append([float(value) for value in row.split(',')[1:]])
+
+            city_obj = self.get_object()
+            graph_obj = Graph.build_from_content(city_obj.graph, GraphContentFormat.PAJEK)
+
+            demand_obj = Demand.build_from_content(graph_obj, matrix)
+            demand_matrix = demand_obj.get_matrix()
+            # pass matrix dict to list of list
+            demand_matrix_data = []
+            size = len(demand_matrix.keys())
+            for i in range(size):
+                row = []
+                for j in range(size):
+                    row.append(demand_matrix[i][j])
+                demand_matrix_data.append(row)
+
+            demand_matrix_header = [node_obj.name for node_obj in graph_obj.get_nodes()]
+        except SIDERMITException as e:
+            raise ParseError(e)
+        except TypeError:
+            raise ParseError('file format wrong')
 
         return Response({'demand_matrix': demand_matrix_data, 'demand_matrix_header': demand_matrix_header},
                         status.HTTP_200_OK)
