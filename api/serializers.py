@@ -340,6 +340,8 @@ class CitySerializer(BaseCitySerializer):
                     Demand.build_from_parameters(graph_obj, validated_data.get('y'), validated_data.get('a'),
                                                  validated_data.get('alpha'), validated_data.get('beta'))
 
+                if validated_data['demand_matrix'] is None:
+                    raise serializers.ValidationError('You have to create a demand matrix before to continue')
                 Demand.build_from_content(graph_obj, validated_data['demand_matrix'])
             except SIDERMITException as e:
                 raise serializers.ValidationError(e)
