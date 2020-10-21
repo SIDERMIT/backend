@@ -156,7 +156,7 @@ class BaseTestCase(TestCase):
     def cities_build_matrix_from_file_action(self, client, public_id, data, status_code=status.HTTP_200_OK):
         url = reverse('cities-build-matrix-from-file', kwargs=dict(public_id=public_id))
 
-        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
+        return self._make_request(client, self.POST_REQUEST, url, data, status_code, format='json')
 
     # scene helper
 

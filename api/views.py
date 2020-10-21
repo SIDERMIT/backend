@@ -126,10 +126,10 @@ class CityViewSet(viewsets.ModelViewSet):
         return Response({'demand_matrix': demand_matrix_data, 'demand_matrix_header': demand_matrix_header},
                         status.HTTP_200_OK)
 
-    @action(detail=True, methods=['GET'])
+    @action(detail=True, methods=['POST'])
     def build_matrix_from_file(self, request, public_id=None):
         try:
-            content = request.query_params.get('content', '')
+            content = request.data.get('content', '')
             matrix = []
             rows = content.split('\n')[1:]
             for row in rows:
