@@ -9,6 +9,7 @@ from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import ParseError, ValidationError
 from rest_framework.response import Response
 from rq import Connection
+from rq.exceptions import NoSuchJobError
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
 from sidermit.publictransportsystem import TransportNetwork as SidermitTransportNetwork
@@ -349,13 +350,15 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
             raise ValidationError('Optimization is not running or queued')
 
         # rq connection
-        queue_name = settings.OPTIMIZER_QUEUE_NAME
         host = settings.REDIS_HOST
         port = settings.REDIS_PORT
-        with Connection(Redis(host, port)) as redis_conn:
-            job = KillJob.fetch(str(transport_network_obj.job_id), connection=redis_conn)
-            job.kill()
-            job.delete()
+        try:
+            with Connection(Redis(host, port)) as redis_conn:
+                job = KillJob.fetch(str(transport_network_obj.job_id), connection=redis_conn)
+                job.kill()
+                job.delete()
+        except NoSuchJobError:
+            pass
 
         transport_network_obj.optimization_status = None
         transport_network_obj.optimization_ran_at = None
