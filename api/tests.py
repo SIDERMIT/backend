@@ -336,6 +336,26 @@ class CityAPITest(BaseTestCase):
 
         self.assertEqual(City.objects.count(), 2)
 
+    def test_create_city_graph_with_optional_parameters(self):
+        n = 2
+        p = 1
+        l = 1
+        g = 1
+        etha = 0.4
+        etha_zone = 1
+        angles = '30,30'
+        gi = '45,45'
+        hi = '30,30'
+        graph = Graph.build_from_parameters(n, l, g, p, etha, etha_zone, [float(a) for a in angles.split(',')],
+                                            [float(a) for a in gi.split(',')], [float(a) for a in hi.split(',')]). \
+            export_graph(GraphContentFormat.PAJEK)
+        fields = dict(name='city name', graph=graph, n=n, p=p, l=l, g=g, etha=etha, etha_zone=etha_zone, angles=angles,
+                      gi=gi, hi=hi, step=CitySerializer.STEP_1)
+        with self.assertNumQueries(2):
+            self.cities_create(self.client, fields)
+
+        self.assertEqual(City.objects.count(), 2)
+
     def test_create_city_graph_with_parameters(self):
         graph_content = Graph.build_from_parameters(4, 1, 1, 1).export_graph(GraphContentFormat.PAJEK)
         fields = dict(name='city name', n=4, p=1, l=1, g=1, graph=graph_content, step=CitySerializer.STEP_1)

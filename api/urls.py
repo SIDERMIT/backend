@@ -2,8 +2,8 @@ from django.urls import path
 from rest_framework import routers
 from rest_framework_nested import routers as nested_routers
 
-from api.views import CityViewSet, SceneViewSet, TransportNetworkViewSet, RouteViewSet, TransportModeViewSet, \
-    validate_route, validate_passenger, validate_transport_mode, recent_optimizations
+from api.views import CityViewSet, SceneViewSet, TransportNetworkViewSet, TransportModeViewSet, \
+    validate_transport_mode, recent_optimizations
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
@@ -16,13 +16,7 @@ scene_transport_mode_router.register('transport_modes', TransportModeViewSet, ba
 
 urlpatterns = [
     path('recent_optimizations', recent_optimizations, name='recent-optimizations'),
-    path('validation/route', validate_route, name='validate-route'),
-    path('validation/passenger', validate_passenger, name='validate-passenger'),
     path('validation/transport_mode', validate_transport_mode, name='validate-transport-mode'),
-    path('validation/graph_file', validate_route, name='validate-graph-file'),
-    path('validation/graph_parameters', validate_route, name='validate-graph-parameters'),
-    path('validation/matrix_file', validate_route, name='validate-matrix-file'),
-    path('validation/matrix_parameters', validate_route, name='validate-matrix-parameters'),
 ]
 
 urlpatterns += router.urls

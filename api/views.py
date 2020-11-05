@@ -15,12 +15,12 @@ from sidermit.exceptions import SIDERMITException
 from sidermit.publictransportsystem import TransportNetwork as SidermitTransportNetwork
 
 from api.serializers import CitySerializer, SceneSerializer, TransportModeSerializer, \
-    TransportNetworkSerializer, RouteSerializer, RecentOptimizationSerializer, \
+    TransportNetworkSerializer, RecentOptimizationSerializer, \
     TransportNetworkOptimizationSerializer, OptimizationResultPerRoute, OptimizationResultPerRouteSerializer
 from api.utils import get_network_descriptor
 from rqworkers.jobs import optimize_transport_network
 from rqworkers.killClass import KillJob
-from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork, Route
+from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,23 @@ class CityViewSet(viewsets.ModelViewSet):
             p = float(request.query_params.get('p'))
             g = float(request.query_params.get('g'))
 
-            graph_obj = Graph.build_from_parameters(n, l, g, p, None, None, None, None, None)
+            etha = request.query_params.get('etha')
+            etha_zone = request.query_params.get('etha_zone')
+            angles = request.query_params.get('angles')
+            gi = request.query_params.get('gi')
+            hi = request.query_params.get('hi')
+            if etha is not None:
+                etha = float(etha)
+            if etha_zone is not None:
+                etha_zone = int(etha_zone)
+            if angles is not None:
+                angles = [float(value) for value in angles.split(',')]
+            if gi is not None:
+                gi = [float(value) for value in gi.split(',')]
+            if hi is not None:
+                hi = [float(value) for value in hi.split(',')]
+
+            graph_obj = Graph.build_from_parameters(n, l, g, p, etha, etha_zone, angles, gi, hi)
             content = graph_obj.export_graph(GraphContentFormat.PAJEK)
             network = get_network_descriptor(graph_obj)
         except (ValueError, SIDERMITException) as e:
@@ -379,16 +395,6 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
         return Response(dict(opt_result=opt_result, opt_result_per_route=opt_result_per_route), status.HTTP_200_OK)
 
 
-class RouteViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin,
-                   mixins.CreateModelMixin, viewsets.GenericViewSet):
-    """
-    API endpoint to work with Route
-    """
-    serializer_class = RouteSerializer
-    lookup_field = 'public_id'
-    queryset = Route.objects.prefetch_related('transport_mode')
-
-
 @api_view()
 def recent_optimizations(request):
     optimizations = TransportNetwork.objects.select_related('scene__city'). \
@@ -397,38 +403,8 @@ def recent_optimizations(request):
 
 
 @api_view()
-def validate_graph_parameters(request):
-    return Response({})
-
-
-@api_view()
-def validate_graph_file(request):
-    return Response({})
-
-
-@api_view()
-def validate_matrix_parameters(request):
-    return Response({})
-
-
-@api_view()
-def validate_matrix_parameters(request):
-    return Response({})
-
-
-@api_view()
 def validate_transport_mode(request):
     transport_mode_serializer_obj = TransportModeSerializer(data=request.query_params)
     transport_mode_serializer_obj.is_valid(raise_exception=True)
 
-    return Response({})
-
-
-@api_view()
-def validate_passenger(request):
-    return Response({})
-
-
-@api_view()
-def validate_route(request):
     return Response({})

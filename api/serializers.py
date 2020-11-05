@@ -370,8 +370,9 @@ class CitySerializer(BaseCitySerializer):
     class Meta:
         model = City
         fields = (
-            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'y', 'a', 'alpha', 'beta',
-            'scene_set', 'network_descriptor', 'demand_matrix_header', 'step')
+            'public_id', 'created_at', 'name', 'graph', 'demand_matrix', 'n', 'p', 'l', 'g', 'etha', 'etha_zone',
+            'angles', 'gi', 'hi', 'y', 'a', 'alpha', 'beta', 'scene_set', 'network_descriptor', 'demand_matrix_header',
+            'step')
         read_only_fields = ['created_at', 'public_id', 'scene_set']
 
 
