@@ -21,6 +21,12 @@ class City(models.Model):
     p = models.FloatField(null=True)
     l = models.FloatField(null=True)
     g = models.FloatField(null=True)
+    # asymmetric graph parameters
+    etha = models.FloatField(null=True)
+    etha_zone = models.IntegerField(null=True)
+    angles = models.CharField(max_length=200, null=True)
+    gi = models.CharField(max_length=200, null=True)
+    hi = models.CharField(max_length=200, null=True)
     # matrix parameters
     y = models.FloatField(null=True)
     a = models.FloatField(null=True)
