@@ -450,7 +450,7 @@ class CityAPITest(BaseTestCase):
         with self.assertNumQueries(0):
             json_response = self.cities_build_graph_file_from_parameters_action(self.client, data)
 
-        expected_content_file = '*vertices 3\n0 CBD 0 0 CBD 0 1.0\n1 P_1 2.0 0.0 P 1 1.0\n2 SC_1 1.0 0.0 SC 1 1.0\n'
+        expected_content_file = 'Content format: [node_id] [node_name] [x] [y] [node_type] [zone_id] [node_width]\nContent format: each row provides have whitespace separated values\n\n*vertices 3\n0 CBD 0 0 CBD 0 1.0\n1 P_1 2.0 0.0 P 1 1.0\n2 SC_1 1.0 0.0 SC 1 1.0\n'
         excepted_network_data = {
             'nodes': [{'name': 'CBD', 'id': 0, 'x': 0, 'y': 0, 'type': 'cbd'},
                       {'name': 'P_1', 'id': 1, 'x': 2.0, 'y': 0.0, 'type': 'periphery'},
@@ -516,7 +516,12 @@ class CityAPITest(BaseTestCase):
             'n': 2,
             'l': 3.0,
             'p': 1.0,
-            'g': 0.20000000000000004
+            'g': 0.20000000000000004,
+            'etha': 0.0,
+            'etha_zone': 1,
+            'angles': [0.0, 72.0],
+            'gi': [1.0, 0.9999999999999999],
+            'hi': [1.0, 1.0]
         }
         self.assertDictEqual(expected_answer, json_response)
 
@@ -1134,19 +1139,10 @@ class ValidationAPITest(BaseTestCase):
 
     def setUp(self):
         self.client = APIClient()
-        # TODO: finish this
-
-    def validate_route(self, client, data, status_code=status.HTTP_200_OK):
-        url = reverse('validate-route')
-        return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
 
     def validate_transport_mode(self, client, data, status_code=status.HTTP_200_OK):
         url = reverse('validate-transport-mode')
         return self._make_request(client, self.GET_REQUEST, url, data, status_code, format='json')
-
-    def test_validate_route(self):
-        json_response = self.validate_route(self.client, dict())
-        print(json_response)
 
     def test_validate_transport_mode_without_data(self):
         json_response = self.validate_transport_mode(self.client, dict(), status_code=status.HTTP_400_BAD_REQUEST)

@@ -35,12 +35,11 @@ def optimize_transport_network(transport_network_public_id):
         network.add_route(route_obj.get_sidermit_route(transport_mode_dict[route_obj.transport_mode_id]))
 
     try:
-        # build optimizer object
-        opt_obj = Optimizer(graph, demand, passenger, network, f=None)
         # run optimizer
-        res = Optimizer.network_optimization(graph, demand, passenger, network, f=None, tolerance=0.01)
+        opt_obj = Optimizer.network_optimization(graph, demand, passenger, network, f=None, tolerance=0.01,
+                                                 max_number_of_iteration=5)
 
-        ov_results = opt_obj.overall_results(res)
+        ov_results = opt_obj.get_overall_results()
 
         opt_result_obj, created = OptimizationResult.objects.get_or_create(
             transport_network=transport_network_obj,
@@ -75,7 +74,7 @@ def optimize_transport_network(transport_network_public_id):
                 opt_per_mode.l = l
                 opt_per_mode.save()
 
-        network_results = opt_obj.network_results(res)
+        network_results = opt_obj.get_network_results()
 
         for route in network_results:
             route_name = route[0]
