@@ -105,12 +105,13 @@ class CityViewSet(viewsets.ModelViewSet):
 
             graph_obj = Graph.build_from_content(graph_content, GraphContentFormat.PAJEK)
             network = get_network_descriptor(graph_obj)
-            n, l, g, p, _, _, _, _, _ = graph_obj.get_parameters()
+            n, l, g, p, etha, etha_zone, angles, gi, hi = graph_obj.get_parameters()
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
 
-        return Response({'network': network, 'n': n, 'l': l, 'p': p, 'g': g},
-                        status.HTTP_200_OK)
+        return Response(
+            {'network': network, 'n': n, 'l': l, 'p': p, 'g': g, 'etha': etha, 'etha_zone': etha_zone, 'angles': angles,
+             'gi': gi, 'hi': hi}, status.HTTP_200_OK)
 
     @action(detail=True, methods=['GET'])
     def build_matrix_data(self, request, public_id=None):
