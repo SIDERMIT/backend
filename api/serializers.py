@@ -205,7 +205,8 @@ class BaseCitySerializer(serializers.ModelSerializer):
         """
         content = dict(nodes=[], edges=[])
         try:
-            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, obj.etha, obj.etha_zone, obj.angles,
+                                                    obj.gi, obj.hi)
         except (SIDERMITException, TypeError):
             graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
 
@@ -217,7 +218,8 @@ class BaseCitySerializer(serializers.ModelSerializer):
     def get_demand_matrix_header(self, obj):
         content = []
         try:
-            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, )
+            graph_obj = Graph.build_from_parameters(obj.n, obj.l, obj.g, obj.p, obj.etha, obj.etha_zone, obj.angles,
+                                                    obj.gi, obj.hi)
         except (SIDERMITException, TypeError):
             graph_obj = Graph.build_from_content(obj.graph, GraphContentFormat.PAJEK)
 
@@ -306,6 +308,51 @@ class CitySerializer(BaseCitySerializer):
     STEP_1 = 'step1'
     STEP_2 = 'step2'
     step = serializers.ChoiceField(write_only=True, choices=[(STEP_1, 'Step 1'), (STEP_2, 'Step 2')])
+    etha = serializers.FloatField(allow_null=True, required=False)
+    etha_zone = serializers.IntegerField(allow_null=True, required=False)
+    angles = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    gi = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    hi = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+
+    def validate_etha(self, value):
+        if value == '':
+            return None
+        return value
+
+    def validate_etha_zone(self, value):
+        if value == '':
+            return None
+        return value
+
+    def validate_angles(self, value):
+        if value == '' or value is None:
+            return None
+        try:
+            [float(v.strip()) for v in value.split(',')]
+        except ValueError:
+            raise serializers.ValidationError('angle value must a value between [0, 360]')
+
+        return value
+
+    def validate_gi(self, value):
+        if value == '' or value is None:
+            return None
+        try:
+            [float(v.strip()) for v in value.split(',')]
+        except ValueError:
+            raise serializers.ValidationError('gi value must a value number')
+
+        return value
+
+    def validate_hi(self, value):
+        if value == '' or value is None:
+            return None
+        try:
+            [float(v.strip()) for v in value.split(',')]
+        except ValueError:
+            raise serializers.ValidationError('hi value must be a list of number')
+
+        return value
 
     def validate(self, validated_data):
 
@@ -315,11 +362,25 @@ class CitySerializer(BaseCitySerializer):
             for key in keys:
                 key_exists.append(validated_data.get(key) is None)
 
+            etha = validated_data.get('etha')
+            etha_zone = validated_data.get('etha_zone')
+            angles = None
+            gi = None
+            hi = None
+
+            if validated_data.get('angles') is not None:
+                angles = [float(v.strip()) for v in validated_data.get('angles').split(',')]
+            if validated_data.get('gi') is not None:
+                gi = [float(v.strip()) for v in validated_data.get('gi').split(',')]
+            if validated_data.get('hi') is not None:
+                hi = [float(v.strip()) for v in validated_data.get('hi').split(',')]
+
             try:
                 if not all(key_exists):
                     # if all keys are not none, there are not parameters but graph has to exist
                     Graph.build_from_parameters(validated_data.get('n'), validated_data.get('l'),
-                                                validated_data.get('g'), validated_data.get('p'))
+                                                validated_data.get('g'), validated_data.get('p'), etha, etha_zone,
+                                                angles, gi, hi)
 
                 Graph.build_from_content(validated_data['graph'], GraphContentFormat.PAJEK)
             except SIDERMITException as e:
