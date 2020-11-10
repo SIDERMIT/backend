@@ -519,9 +519,9 @@ class CityAPITest(BaseTestCase):
             'g': 0.20000000000000004,
             'etha': 0.0,
             'etha_zone': 1,
-            'angles': [0.0, 72.0],
-            'gi': [1.0, 0.9999999999999999],
-            'hi': [1.0, 1.0]
+            'angles': '0.0,72.0',
+            'gi': '1.0,1.0',
+            'hi': '1.0,1.0'
         }
         self.assertDictEqual(expected_answer, json_response)
 
