@@ -106,6 +106,9 @@ class CityViewSet(viewsets.ModelViewSet):
             graph_obj = Graph.build_from_content(graph_content, GraphContentFormat.PAJEK)
             network = get_network_descriptor(graph_obj)
             n, l, g, p, etha, etha_zone, angles, gi, hi = graph_obj.get_parameters()
+            angles = ','.join(map(lambda x: str(round(x, 2)), angles))
+            gi = ','.join(map(lambda x: str(round(x, 2)), gi))
+            hi = ','.join(map(lambda x: str(round(x, 2)), hi))
         except (ValueError, SIDERMITException) as e:
             raise ParseError(e)
 
