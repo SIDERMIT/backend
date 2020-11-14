@@ -1,15 +1,15 @@
 import logging
 import uuid
 
-from django.conf import settings
 from django.utils import timezone
-from redis import Redis
+from django_rq.queues import get_connection
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import ParseError, ValidationError
 from rest_framework.response import Response
-from rq import Connection
-from rq.exceptions import NoSuchJobError
+from rq import cancel_job
+from rq.command import send_kill_horse_command
+from rq.worker import Worker, WorkerStatus
 from sidermit.city import Graph, GraphContentFormat, Demand
 from sidermit.exceptions import SIDERMITException
 from sidermit.publictransportsystem import TransportNetwork as SidermitTransportNetwork
@@ -19,7 +19,6 @@ from api.serializers import CitySerializer, SceneSerializer, TransportModeSerial
     TransportNetworkOptimizationSerializer, OptimizationResultPerRoute, OptimizationResultPerRouteSerializer
 from api.utils import get_network_descriptor
 from rqworkers.jobs import optimize_transport_network
-from rqworkers.killClass import KillJob
 from storage.models import City, Scene, Passenger, TransportMode, TransportNetwork
 
 logger = logging.getLogger(__name__)
@@ -369,16 +368,15 @@ class TransportNetworkViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixi
                                                          TransportNetwork.STATUS_FINISHED]:
             raise ValidationError('Optimization is not running or queued')
 
-        # rq connection
-        host = settings.REDIS_HOST
-        port = settings.REDIS_PORT
-        try:
-            with Connection(Redis(host, port)) as redis_conn:
-                job = KillJob.fetch(str(transport_network_obj.job_id), connection=redis_conn)
-                job.kill()
-                job.delete()
-        except NoSuchJobError:
-            pass
+        redis_conn = get_connection()
+        workers = Worker.all(redis_conn)
+        for worker in workers:
+            if worker.state == WorkerStatus.BUSY and \
+                    worker.get_current_job_id() == str(transport_network_obj.job_id):
+                send_kill_horse_command(redis_conn, worker.name)
+
+        # remove from queue
+        cancel_job(str(transport_network_obj.job_id), connection=redis_conn)
 
         transport_network_obj.optimization_status = None
         transport_network_obj.optimization_ran_at = None
