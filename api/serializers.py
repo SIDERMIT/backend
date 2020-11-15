@@ -128,9 +128,10 @@ class TransportNetworkSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             # check if has results
-            if instance.optimization_status == TransportNetwork.STATUS_FINISHED:
+            if instance.optimization_status in [TransportNetwork.STATUS_QUEUED, TransportNetwork.STATUS_PROCESSING,
+                                                TransportNetwork.STATUS_FINISHED]:
                 raise serializers.ValidationError(
-                    'Transport network "{0}" can not be modified because has optimization results.'.format(
+                    'Transport network "{0}" can not be modified when is queued, processing or has results'.format(
                         instance.name))
 
             # update attributes of transport network
