@@ -4,9 +4,9 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 from sidermit.city import Graph, GraphContentFormat, Demand
-from sidermit.publictransportsystem import RouteType
 from sidermit.publictransportsystem import Passenger as SidermitPassenger, TransportMode as SidermitTransportMode, \
     TransportNetwork as SidermitTransportNetwork, Route as SidermitRoute
+from sidermit.publictransportsystem import RouteType
 
 
 class City(models.Model):
@@ -112,7 +112,6 @@ class TransportNetwork(models.Model):
     optimization_duration = models.DurationField(default=None, null=True)
 
     job_id = models.UUIDField(null=True)
-    # job identifier
 
     def get_sidermit_network(self, city_graph):
         return SidermitTransportNetwork(city_graph)
@@ -184,13 +183,13 @@ class OptimizationResultPerRoute(models.Model):
 class OptimizationResultPerRouteDetail(models.Model):
     """ result for each arc related to route """
     opt_route = models.ForeignKey(OptimizationResultPerRoute, on_delete=models.CASCADE)
-    DIRECTION_I = 'i'
-    DIRECTION_R = 'r'
+    DIRECTION_I = 'direction_1'
+    DIRECTION_R = 'direction_2'
     DIRECTION_CHOICES = (
         (DIRECTION_I, 'going'),
         (DIRECTION_R, 'reverse')
     )
-    direction = models.CharField(max_length=1, choices=DIRECTION_CHOICES)
+    direction = models.CharField(max_length=11, choices=DIRECTION_CHOICES)
     origin_node = models.IntegerField()
     destination_node = models.IntegerField()
     lambda_value = models.FloatField()
