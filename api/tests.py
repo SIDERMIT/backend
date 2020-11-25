@@ -864,7 +864,7 @@ class TransportNetworkAPITest(BaseTestCase):
 
         self.assertEqual(TransportNetwork.objects.count(), 2)
         self.assertDictEqual(json_response,
-                             TransportNetworkSerializer(TransportNetwork.objects.order_by('-created_at').first()).data)
+                             TransportNetworkSerializer(TransportNetwork.objects.order_by('-pk').first()).data)
 
     def test_create_default_route(self):
         transport_mode_public_id = str(TransportMode.objects.filter(scene=self.scene_obj).first().public_id)
