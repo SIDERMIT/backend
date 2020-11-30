@@ -699,7 +699,7 @@ class SceneAPITest(BaseTestCase):
         self.assertEqual(Scene.objects.count(), 0)
 
     def test_duplicate_scene(self):
-        with self.assertNumQueries(18):
+        with self.assertNumQueries(24):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)
@@ -708,7 +708,7 @@ class SceneAPITest(BaseTestCase):
     def test_duplicate_scene_without_passenger(self):
         self.scene_obj.passenger.delete()
 
-        with self.assertNumQueries(16):
+        with self.assertNumQueries(22):
             json_response = self.scenes_duplicate_action(self.client, self.scene_obj.public_id)
 
         self.assertEqual(Scene.objects.count(), 2)
