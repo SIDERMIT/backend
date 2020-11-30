@@ -55,6 +55,9 @@ class CityViewSet(viewsets.ModelViewSet):
         new_city_obj.save()
 
         for scene_obj in new_city_obj.scene_set.all():
+            transportmode_obj_list = scene_obj.transportmode_set.all()
+            transportnetwork_obj_list = scene_obj.transportnetwork_set.all()
+
             scene_obj.id = None
             scene_obj.created_at = timezone.now()
             scene_obj.public_id = uuid.uuid4()
@@ -73,12 +76,33 @@ class CityViewSet(viewsets.ModelViewSet):
             except Passenger.DoesNotExist:
                 pass
 
-            for transport_mode_obj in scene_obj.transportmode_set.all():
+            transport_mode_obj_dict = dict()
+            for transport_mode_obj in transportmode_obj_list:
+                previous_pk = transport_mode_obj.pk
                 transport_mode_obj.pk = None
                 transport_mode_obj.created_at = timezone.now()
                 transport_mode_obj.public_id = uuid.uuid4()
                 transport_mode_obj.scene = scene_obj
                 transport_mode_obj.save()
+                transport_mode_obj_dict[previous_pk] = transport_mode_obj
+
+            for transport_network_obj in transportnetwork_obj_list:
+                route_obj_list = transport_network_obj.route_set.all()
+
+                transport_network_obj.pk = None
+                transport_network_obj.scene = scene_obj
+                transport_network_obj.optimization_status = None
+                transport_network_obj.optimization_ran_at = None
+                transport_network_obj.created_at = timezone.now()
+                transport_network_obj.public_id = uuid.uuid4()
+                transport_network_obj.save()
+
+                for route_obj in route_obj_list:
+                    route_obj.pk = None
+                    route_obj.transport_network = transport_network_obj
+                    route_obj.created_at = timezone.now()
+                    route_obj.transport_mode = transport_mode_obj_dict[route_obj.transport_mode.pk]
+                    route_obj.save()
 
         new_city_obj.refresh_from_db()
 
@@ -233,12 +257,33 @@ class SceneViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.U
         except Passenger.DoesNotExist:
             pass
 
+        transport_mode_obj_dict = dict()
         for transport_mode_obj in self.get_object().transportmode_set.all():
+            previous_pk = transport_mode_obj.pk
             transport_mode_obj.pk = None
             transport_mode_obj.created_at = now
             transport_mode_obj.public_id = uuid.uuid4()
             transport_mode_obj.scene = new_scene_obj
             transport_mode_obj.save()
+            transport_mode_obj_dict[previous_pk] = transport_mode_obj
+
+        for transport_network_obj in self.get_object().transportnetwork_set.all():
+            route_obj_list = transport_network_obj.route_set.all()
+
+            transport_network_obj.pk = None
+            transport_network_obj.scene = new_scene_obj
+            transport_network_obj.optimization_status = None
+            transport_network_obj.optimization_ran_at = None
+            transport_network_obj.created_at = timezone.now()
+            transport_network_obj.public_id = uuid.uuid4()
+            transport_network_obj.save()
+
+            for route_obj in route_obj_list:
+                route_obj.pk = None
+                route_obj.transport_network = transport_network_obj
+                route_obj.created_at = timezone.now()
+                route_obj.transport_mode = transport_mode_obj_dict[route_obj.transport_mode.pk]
+                route_obj.save()
 
         # update reference to return correct transport mode instances
         new_scene_obj.refresh_from_db()

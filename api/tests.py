@@ -297,10 +297,11 @@ class CityAPITest(BaseTestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.city_obj = self.create_data(city_number=1, scene_number=1)[0]
+        self.city_obj = self.create_data(city_number=1, scene_number=1, passenger=True, transport_mode_number=2,
+                                         transport_network_number=2)[0]
 
     def test_retrieve_city_list(self):
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(7):
             json_response = self.cities_list(self.client, dict())
 
         self.assertEqual(len(json_response), 1)
@@ -313,13 +314,13 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(len(json_response), 0)
 
     def test_retrieve_city_list_but_limit_param_is_not_int(self):
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(7):
             json_response = self.cities_list(self.client, dict(limit='fake_number'))
 
         self.assertEqual(len(json_response), 1)
 
     def test_retrieve_city_with_public_id(self):
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(7):
             json_response = self.cities_retrieve(self.client, self.city_obj.public_id)
 
         self.assertDictEqual(json_response, CitySerializer(self.city_obj).data)
@@ -433,13 +434,13 @@ class CityAPITest(BaseTestCase):
         self.assertIsNone(self.city_obj.beta)
 
     def test_delete_city(self):
-        with self.assertNumQueries(11):
+        with self.assertNumQueries(19):
             self.cities_delete(self.client, self.city_obj.public_id)
 
         self.assertEqual(City.objects.count(), 0)
 
     def test_duplicate_city(self):
-        with self.assertNumQueries(12):
+        with self.assertNumQueries(22):
             json_response = self.cities_duplicate_action(self.client, self.city_obj.public_id)
 
         self.assertEqual(City.objects.count(), 2)
