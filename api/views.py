@@ -61,6 +61,27 @@ class CityViewSet(viewsets.ModelViewSet):
             scene_obj.city = new_city_obj
             scene_obj.save()
 
+            try:
+                passenger_obj = scene_obj.passenger
+                passenger_obj.pk = None
+                passenger_obj.created_at = timezone.now()
+                passenger_obj.scene = scene_obj
+                passenger_obj.save()
+
+                scene_obj.passenger = passenger_obj
+                scene_obj.save()
+            except Passenger.DoesNotExist:
+                pass
+
+            for transport_mode_obj in scene_obj.transportmode_set.all():
+                transport_mode_obj.pk = None
+                transport_mode_obj.created_at = timezone.now()
+                transport_mode_obj.public_id = uuid.uuid4()
+                transport_mode_obj.scene = scene_obj
+                transport_mode_obj.save()
+
+        new_city_obj.refresh_from_db()
+
         return Response(CitySerializer(new_city_obj).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['GET'])

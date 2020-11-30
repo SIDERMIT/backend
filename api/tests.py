@@ -439,7 +439,7 @@ class CityAPITest(BaseTestCase):
         self.assertEqual(City.objects.count(), 0)
 
     def test_duplicate_city(self):
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(12):
             json_response = self.cities_duplicate_action(self.client, self.city_obj.public_id)
 
         self.assertEqual(City.objects.count(), 2)
